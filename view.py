@@ -2,9 +2,12 @@ from os.path import basename
 
 import numpy as np
 import nibabel as nib
-from PySide6.QtWidgets import QWidget, QMainWindow, QToolBar, QStatusBar, QHBoxLayout, QVBoxLayout
+
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt
+
+from PySide6.QtWidgets import QWidget, QMainWindow, QToolBar, QDockWidget, QStatusBar, QHBoxLayout, QVBoxLayout
 from PySide6.QtWidgets import QFileDialog, QLineEdit, QLabel, QComboBox, QPushButton
-from PySide6.QtGui import QPixmap
 from matplotlib.backends.backend_qtagg import FigureCanvas
 from matplotlib.figure import Figure
 
@@ -13,7 +16,9 @@ import tigerbx
 model = 'aseg'
 input_dir = None
 
+
 class MainWindow(QMainWindow):
+
     def __init__(self, app):
         super().__init__()
         self.app = app
@@ -46,6 +51,15 @@ class MainWindow(QMainWindow):
         tool_bar.x_line.textEdited.connect(self.update_coronal)
         self.addToolBar(tool_bar)
 
+        # dock widgets
+        self.file_dock = QDockWidget(self.tr('File List'), self)
+        self.file_dock.setObjectName('Files')
+        fileListWidget = QtWidgets.QWidget()
+        fileListWidget.setLayout(QVBoxLayout())
+        self.file_dock.setWidget(fileListWidget)
+
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
+
         #  central widget
         self.central_widget = CentralWidget()
         self.setCentralWidget(self.central_widget)
@@ -56,14 +70,10 @@ class MainWindow(QMainWindow):
 
     def open_file(self):
         print('Open File')
-        fileName, _ = QFileDialog.getOpenFileName(
-            self,
-            'select file',
-            r'.',
-            'Nii Files (*.nii *.nii.gz)'
-        )
-        
-        global input_dir 
+        fileName, _ = QFileDialog.getOpenFileName(self, 'select file', r'.',
+                                                  'Nii Files (*.nii *.nii.gz)')
+
+        global input_dir
         input_dir = fileName
         self.statusBar().showMessage(f'Opened: {input_dir}')
 
@@ -83,12 +93,12 @@ class MainWindow(QMainWindow):
                 self.central_widget.image.coronal.autoscale()
                 self.central_widget.image.coronal.figure.canvas.draw()
 
-
     def exit(self):
         self.app.quit()
 
 
 class ToolBar(QToolBar):
+
     def __init__(self):
         super().__init__()
 
@@ -108,7 +118,7 @@ class ToolBar(QToolBar):
         self.addWidget(self.y_line)
         self.addWidget(QLabel('Z'))
         self.addWidget(self.z_line)
-        
+
         self.addWidget(QLabel('model'))
         self.addWidget(ModelComboBox())
 
@@ -118,10 +128,7 @@ class ToolBar(QToolBar):
         self.addWidget(self.run_button)
 
     def run(self):
-        args = {
-            'aseg': 'a',
-            'dgm': 'd'
-        }
+        args = {'aseg': 'a', 'dgm': 'd'}
         print('run', input_dir)
 
         if input_dir:
@@ -130,6 +137,7 @@ class ToolBar(QToolBar):
 
 
 class ModelComboBox(QComboBox):
+
     def __init__(self):
         super().__init__()
         self.addItems(['aseg', 'dgm'])
@@ -142,12 +150,14 @@ class ModelComboBox(QComboBox):
 
 
 class CmapComboBox(QComboBox):
+
     def __init__(self):
         super().__init__()
         self.addItems(['Grayscale', 'Freesurfer'])
 
 
 class CentralWidget(QWidget):
+
     def __init__(self):
         super().__init__()
 
@@ -161,11 +171,13 @@ class CentralWidget(QWidget):
 
 
 class iFrame(QWidget):
+
     def __init__(self):
         super().__init__()
 
         self.coronal_canvas = FigureCanvas(Figure(figsize=(5, 3)))
-        self.coronal = self.coronal_canvas.figure.subplots().imshow(np.zeros((256, 256)), cmap='gray')
+        self.coronal = self.coronal_canvas.figure.subplots().imshow(np.zeros((256, 256)),
+                                                                    cmap='gray')
         # coronal_canvas.figure.subplots().axis('off')
 
         layout = QHBoxLayout()
