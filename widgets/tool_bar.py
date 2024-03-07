@@ -27,18 +27,21 @@ class ToolBar(QtWidgets.QToolBar):
         self.x_line = QtWidgets.QLineEdit('0')
         self.addWidget(self.x_line)
         self.x_slide = Slider()
+        self.x_slide.setMinimum(0)
         self.addWidget(self.x_slide)
 
         self.addWidget(QtWidgets.QLabel('Y'))
         self.y_line = QtWidgets.QLineEdit('0')
         self.addWidget(self.y_line)
-        self.z_slide = Slider()
-        self.addWidget(self.z_slide)
+        self.y_slide = Slider()
+        self.y_slide.setMinimum(0)
+        self.addWidget(self.y_slide)
 
         self.addWidget(QtWidgets.QLabel('Z'))
         self.z_line = QtWidgets.QLineEdit('0')
         self.addWidget(self.z_line)
         self.z_slide = Slider()
+        self.z_slide.setMinimum(0)
         self.addWidget(self.z_slide)
 
         self.addWidget(QtWidgets.QLabel('color map'))

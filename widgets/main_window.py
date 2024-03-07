@@ -1,28 +1,35 @@
+import threading
+
 from PySide6.QtCore import Qt
 from PySide6 import QtWidgets, QtGui
-import nibabel as nib
 import numpy as np
 
-from UI import Ui_MainWindow
-from widgets import ToolBar, Models, Canvas
+import tigerbx
+
+from .tool_bar import ToolBar
+from .models import Models
+from .canvas import Canvas
+from .run_dialog import RunDialog
+from utils import image_process
 
 
-class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
+class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, app):
         super().__init__()
-        # self.setupUi(self)
         self.app = app
-        self.image = None
+        self.filenames = None
+        self.current_file = None
+        self.setup_ui()
+        self.connect()
 
+    def setup_ui(self):
         # menu bar
         menu_bar = self.menuBar()
 
         file_menu = menu_bar.addMenu('File')
-        open_action = file_menu.addAction('Open')
-        open_action.triggered.connect(self.open_file)
-        exit_action = file_menu.addAction('Exit')
-        exit_action.triggered.connect(self.exit)
+        self.open_action = file_menu.addAction('Open')
+        self.exit_action = file_menu.addAction('Exit')
 
         overlay_menu = menu_bar.addMenu('Overlay')
         add_action = overlay_menu.addAction('Add')
@@ -38,44 +45,161 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.tool_bar = ToolBar()
         self.addToolBar(self.tool_bar)
 
-        self.tool_bar.x_line.textEdited.connect(self.update_coronal)
-        self.tool_bar.x_slide.valueChanged.connect(self.update_coronal)
-
         # dock widgets
-        self.file_dock = QtWidgets.QDockWidget(self.tr(''), self)
-        dock_widget = Models()
-        self.file_dock.setWidget(dock_widget)
+        self.model_dock = QtWidgets.QDockWidget(self.tr(''), self)
+        self.model_dock.setWidget(Models())
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.model_dock)
+
+        self.file_dock = QtWidgets.QDockWidget(self.tr('Input Files'))
+        self.file_list_widget = QtWidgets.QListWidget()
+        self.file_list_widget.itemSelectionChanged.connect(self.file_selection_changed)
+        self.file_dock.setWidget(self.file_list_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
+
+        self.output_dock = QtWidgets.QDockWidget(self.tr('Input Files'))
+        self.output_list_widget = QtWidgets.QListWidget()
+        self.output_dock.setWidget(self.output_list_widget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.output_dock)
 
         #  central widget
         self.central_widget = Canvas()
         self.setCentralWidget(self.central_widget)
 
-    def open_file(self):
+    def connect(self):
+        self.open_action.triggered.connect(self.open_files)
+        self.exit_action.triggered.connect(self.exit)
+
+        self.tool_bar.x_line.textEdited.connect(self.update_coronal)
+        self.tool_bar.x_slide.valueChanged.connect(self.update_coronal)
+        self.tool_bar.y_line.textEdited.connect(self.update_sagittal)
+        self.tool_bar.y_slide.valueChanged.connect(self.update_sagittal)
+        self.tool_bar.z_line.textEdited.connect(self.update_axial)
+        self.tool_bar.z_slide.valueChanged.connect(self.update_axial)
+        self.tool_bar.run_button.clicked.connect(self.run)
+
+    def open_files(self):
         print('Open File')
-        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'select file', r'.',
-                                                            'Nii Files (*.nii *.nii.gz)')
+        self.filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'select file', r'.',
+                                                                   'Nii Files (*.nii *.nii.gz)')
 
-        global input_dir
-        input_dir = fileName
-        self.statusBar().showMessage(f'Opened: {input_dir}')
+        self.file_list_widget.clear()
+        for filename in self.filenames:
+            item = QtWidgets.QListWidgetItem(filename)
+            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            self.file_list_widget.addItem(item)
 
-        self.image = nib.load(input_dir).get_fdata()
-        self.image = (self.image - self.image.min()) / (self.image.max() - self.image.min()) * 255
-        self.image = self.image.astype(np.uint8)
+        self.change_current_file(self.filenames[0])
 
-        self.tool_bar.x_slide.setRange(0, self.image.shape[0])
+    def file_selection_changed(self):
+        items = self.file_list_widget.selectedItems()
 
-    def update_coronal(self, layer):
-        if self.image is not None:
+        if not items:
+            return
+
+        item = items[0]
+        self.change_current_file(str(item.text()))
+
+    def change_current_file(self, f):
+        self.statusBar().showMessage(f'Opened: {f}')
+
+        self.current_file = image_process.file_to_arr(f)
+        self.tool_bar.x_slide.setMaximum(self.current_file.shape[2])
+        self.tool_bar.y_slide.setMaximum(self.current_file.shape[0])
+        self.tool_bar.z_slide.setMaximum(self.current_file.shape[1])
+
+        self.update_coronal(self.current_file.shape[1] // 2)
+        self.update_sagittal(self.current_file.shape[0] // 2)
+        self.update_axial(self.current_file.shape[2] // 2)
+
+    def update_axial(self, layer):
+        if self.current_file is not None:
+            image = self.current_file
             layer = layer if layer is int() else int(layer)
-            if 0 <= layer < self.image.shape[0]:
-                qImg = QtGui.QPixmap(
-                    QtGui.QImage(np.ascontiguousarray(self.image[layer, :, :]), self.image.shape[2],
-                                 self.image.shape[1], QtGui.QImage.Format_Grayscale8))
-                self.central_widget.disp1.coronal.setPixmap(qImg)
+            if 0 <= layer < image.shape[2]:
+                qImg1 = QtGui.QPixmap(
+                    QtGui.QImage(np.ascontiguousarray(np.rot90(image[:, :, layer])), image.shape[0],
+                                 image.shape[1], QtGui.QImage.Format_Grayscale8))
+
+                qImg1 = qImg1.scaled(self.central_widget.disp1.coronal.frameSize(),
+                                     aspectMode=Qt.KeepAspectRatio)
+
+                # print(image.shape[0], image.shape[1])
+                # from matplotlib import pyplot as plt
+                # plt.figure()
+                # plt.imshow(np.ascontiguousarray(np.rot90(image[:, :, layer])), cmap='gray')
+                # plt.show()
+
+                self.central_widget.disp1.axial.setPixmap(qImg1)
+                self.central_widget.disp2.axial.setPixmap(qImg1)
+                self.tool_bar.x_line.setText(str(layer))
             else:
                 print('blank')
+
+    def update_sagittal(self, layer):
+        if self.current_file is not None:
+            image = self.current_file
+            layer = layer if layer is int() else int(layer)
+            if 0 <= layer < image.shape[0]:
+                qImg1 = QtGui.QPixmap(
+                    QtGui.QImage(np.ascontiguousarray(np.rot90(image[layer, :, :])), image.shape[1],
+                                 image.shape[2], QtGui.QImage.Format_Grayscale8))
+
+                qImg1 = qImg1.scaled(self.central_widget.disp1.sagittal.frameSize(),
+                                     aspectMode=Qt.KeepAspectRatio)
+
+                self.central_widget.disp1.sagittal.setPixmap(qImg1)
+                self.central_widget.disp2.sagittal.setPixmap(qImg1)
+                self.tool_bar.y_line.setText(str(layer))
+            else:
+                print('blank')
+
+    def update_coronal(self, layer):
+        if self.current_file is not None:
+            image = self.current_file
+            layer = layer if layer is int() else int(layer)
+            if 0 <= layer < image.shape[1]:
+                qImg1 = QtGui.QPixmap(
+                    QtGui.QImage(np.ascontiguousarray(np.rot90(image[:, layer, :])), image.shape[0],
+                                 image.shape[2], QtGui.QImage.Format_Grayscale8))
+
+                qImg1 = qImg1.scaled(self.central_widget.disp1.axial.frameSize(),
+                                     aspectMode=Qt.KeepAspectRatio)
+
+                self.central_widget.disp1.coronal.setPixmap(qImg1)
+                self.central_widget.disp2.coronal.setPixmap(qImg1)
+                self.tool_bar.z_line.setText(str(layer))
+            else:
+                print('blank')
+
+    def run(self):
+        if self.filenames is not None:
+            dlg = RunDialog()
+            thread = threading.Thread(
+                target=lambda filenames=self.filenames: self.run_tigerbx(filenames))
+
+            thread.start()
+            dlg.exec()
+            thread.join()
+
+    def run_tigerbx(self, filenames):
+        models = self.model_dock.widget()
+
+        args = ''
+        args = args + 'm' if models.brain_mask.isChecked() else args
+        args = args + 'a' if models.aseg.isChecked() else args
+        args = args + 'b' if models.extracted_brain.isChecked() else args
+        args = args + 'B' if models.brain_age_mapping.isChecked() else args
+        args = args + 'd' if models.dgm.isChecked() else args
+        args = args + 'k' if models.dkt.isChecked() else args
+        args = args + 'c' if models.cortical_thickness.isChecked() else args
+        args = args + 'C' if models.fsl_style.isChecked() else args
+        args = args + 't' if models.tumor.isChecked() else args
+        args = args + 'w' if models.wm_parcellation.isChecked() else args
+        args = args + 'W' if models.wm_hyperintensity.isChecked() else args
+        args = args + 'q' if models.save_qc.isChecked() else args
+        args = args + 'z' if models.force_gz.isChecked() else args
+
+        tigerbx.run(args, filenames)
 
     def exit(self):
         self.app.quit()

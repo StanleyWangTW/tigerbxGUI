@@ -1,5 +1,4 @@
 from PySide6 import QtWidgets
-import numpy as np
 
 
 class iFrame(QtWidgets.QWidget):
@@ -11,10 +10,16 @@ class iFrame(QtWidgets.QWidget):
         self.setLayout(layout)
 
         self.coronal = QtWidgets.QLabel()
+        self.coronal.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         layout.addWidget(self.coronal)
+
         self.sagittal = QtWidgets.QLabel()
+        self.sagittal.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                    QtWidgets.QSizePolicy.Expanding)
         layout.addWidget(self.sagittal)
+
         self.axial = QtWidgets.QLabel()
+        self.axial.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         layout.addWidget(self.axial)
 
 
@@ -27,6 +32,6 @@ class Canvas(QtWidgets.QWidget):
         self.setLayout(v_layout)
 
         self.disp1 = iFrame()
-        v_layout.addWidget(self.disp1)
+        v_layout.addWidget(self.disp1, 1)
         self.disp2 = iFrame()
-        v_layout.addWidget(self.disp2)
+        v_layout.addWidget(self.disp2, 1)

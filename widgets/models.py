@@ -30,6 +30,7 @@ class Models(QtWidgets.QWidget):
         self.gridLayout.addWidget(self.wm_hyperintensity, 5, 0, 1, 1)
 
         self.brain_mask = QtWidgets.QCheckBox("brain_mask")
+        self.brain_mask.setChecked(True)
         self.gridLayout.addWidget(self.brain_mask, 0, 0, 1, 1)
 
         self.tumor = QtWidgets.QCheckBox("tumor")
