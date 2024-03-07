@@ -69,10 +69,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.open_action.triggered.connect(self.open_files)
         self.exit_action.triggered.connect(self.exit)
 
-        self.tool_bar.x_line.textEdited.connect(self.update_coronal)
-        self.tool_bar.x_slide.valueChanged.connect(self.update_coronal)
-        self.tool_bar.y_line.textEdited.connect(self.update_sagittal)
-        self.tool_bar.y_slide.valueChanged.connect(self.update_sagittal)
+        self.tool_bar.y_line.textEdited.connect(self.update_coronal)
+        self.tool_bar.y_slide.valueChanged.connect(self.update_coronal)
+        self.tool_bar.x_line.textEdited.connect(self.update_sagittal)
+        self.tool_bar.x_slide.valueChanged.connect(self.update_sagittal)
         self.tool_bar.z_line.textEdited.connect(self.update_axial)
         self.tool_bar.z_slide.valueChanged.connect(self.update_axial)
         self.tool_bar.run_button.clicked.connect(self.run)
@@ -103,9 +103,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage(f'Opened: {f}')
 
         self.current_file = image_process.file_to_arr(f)
-        self.tool_bar.x_slide.setMaximum(self.current_file.shape[2])
-        self.tool_bar.y_slide.setMaximum(self.current_file.shape[0])
-        self.tool_bar.z_slide.setMaximum(self.current_file.shape[1])
+        self.tool_bar.x_slide.setMaximum(self.current_file.shape[0])
+        self.tool_bar.y_slide.setMaximum(self.current_file.shape[1])
+        self.tool_bar.z_slide.setMaximum(self.current_file.shape[2])
 
         self.update_coronal(self.current_file.shape[1] // 2)
         self.update_sagittal(self.current_file.shape[0] // 2)
@@ -131,7 +131,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 self.central_widget.disp1.axial.setPixmap(qImg1)
                 self.central_widget.disp2.axial.setPixmap(qImg1)
-                self.tool_bar.x_line.setText(str(layer))
+                self.tool_bar.z_line.setText(str(layer))
             else:
                 print('blank')
 
@@ -149,7 +149,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 self.central_widget.disp1.sagittal.setPixmap(qImg1)
                 self.central_widget.disp2.sagittal.setPixmap(qImg1)
-                self.tool_bar.y_line.setText(str(layer))
+                self.tool_bar.x_line.setText(str(layer))
             else:
                 print('blank')
 
@@ -167,7 +167,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 self.central_widget.disp1.coronal.setPixmap(qImg1)
                 self.central_widget.disp2.coronal.setPixmap(qImg1)
-                self.tool_bar.z_line.setText(str(layer))
+                self.tool_bar.y_line.setText(str(layer))
             else:
                 print('blank')
 
