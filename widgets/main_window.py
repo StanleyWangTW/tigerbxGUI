@@ -1,4 +1,5 @@
 import threading
+import os
 
 from PySide6.QtCore import Qt
 from PySide6 import QtWidgets, QtGui
@@ -77,6 +78,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tool_bar.z_slide.valueChanged.connect(self.update_axial)
         self.tool_bar.run_button.clicked.connect(self.run)
 
+        self.central_widget.disp1.coronal.mouseMoveEvent = self.coronal_mve
+        self.central_widget.disp1.sagittal.mouseMoveEvent = self.sagittal_mve
+        self.central_widget.disp1.axial.mouseMoveEvent = self.axial_mve
+
     def open_files(self):
         print('Open File')
         self.filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'select file', r'.',
@@ -110,6 +115,33 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_coronal(self.current_file.shape[1] // 2)
         self.update_sagittal(self.current_file.shape[0] // 2)
         self.update_axial(self.current_file.shape[2] // 2)
+
+    def coronal_mve(self, event):
+        x, y = event.pos().x(), event.pos().y()
+        print('pos', x, y)
+        if x >= 0 and x < self.current_file.shape[0]:
+            self.update_sagittal(x)
+
+        if y >= 0 and y < self.current_file.shape[1]:
+            self.update_axial(y)
+
+    def sagittal_mve(self, event):
+        x, y = event.pos().x(), event.pos().y()
+        print('pos', x, y)
+        if x >= 0 and x < self.current_file.shape[1]:
+            self.update_coronal(x)
+
+        if y >= 0 and y < self.current_file.shape[2]:
+            self.update_axial(y)
+
+    def axial_mve(self, event):
+        x, y = event.pos().x(), event.pos().y()
+        print('pos', x, y)
+        if x >= 0 and x < self.current_file.shape[0]:
+            self.update_sagittal(x)
+
+        if y >= 0 and y < self.current_file.shape[2]:
+            self.update_coronal(y)
 
     def update_axial(self, layer):
         if self.current_file is not None:
@@ -173,15 +205,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def run(self):
         if self.filenames is not None:
-            dlg = RunDialog()
+            output_dir = 'output'
+            while os.path.exists(output_dir):
+                output_dir += ' new'
+
+            dlg = RunDialog(fnum=len(self.filenames), output_dir=output_dir)
+            os.mkdir(output_dir)
             thread = threading.Thread(
-                target=lambda filenames=self.filenames: self.run_tigerbx(filenames))
+                target=lambda filenames=self.filenames: self.run_tigerbx(filenames, output_dir))
 
             thread.start()
             dlg.exec()
             thread.join()
 
-    def run_tigerbx(self, filenames):
+    def run_tigerbx(self, filenames, output_dir):
         models = self.model_dock.widget()
 
         args = ''
@@ -199,7 +236,7 @@ class MainWindow(QtWidgets.QMainWindow):
         args = args + 'q' if models.save_qc.isChecked() else args
         args = args + 'z' if models.force_gz.isChecked() else args
 
-        tigerbx.run(args, filenames)
+        tigerbx.run(args, filenames, output_dir)
 
     def exit(self):
         self.app.quit()

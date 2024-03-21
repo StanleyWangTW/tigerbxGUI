@@ -22,6 +22,10 @@ class iFrame(QtWidgets.QWidget):
         self.axial.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         layout.addWidget(self.axial)
 
+        self.coronal.mouseMoveEvent = self.mouseMoveEvent
+        self.sagittal.mouseMoveEvent = self.mouseMoveEvent
+        self.axial.mouseMoveEvent = self.mouseMoveEvent
+
 
 class Canvas(QtWidgets.QWidget):
 
