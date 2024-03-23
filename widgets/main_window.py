@@ -57,7 +57,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_dock.setWidget(self.file_list_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
 
-        self.output_dock = QtWidgets.QDockWidget(self.tr('Input Files'))
+        self.output_dock = QtWidgets.QDockWidget(self.tr('Output Files'))
         self.output_list_widget = QtWidgets.QListWidget()
         self.output_dock.setWidget(self.output_list_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.output_dock)
@@ -71,16 +71,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.exit_action.triggered.connect(self.exit)
 
         self.tool_bar.y_line.textEdited.connect(self.update_coronal)
-        self.tool_bar.y_slide.valueChanged.connect(self.update_coronal)
         self.tool_bar.x_line.textEdited.connect(self.update_sagittal)
-        self.tool_bar.x_slide.valueChanged.connect(self.update_sagittal)
         self.tool_bar.z_line.textEdited.connect(self.update_axial)
-        self.tool_bar.z_slide.valueChanged.connect(self.update_axial)
         self.tool_bar.run_button.clicked.connect(self.run)
 
         self.central_widget.disp1.coronal.mouseMoveEvent = self.coronal_mve
         self.central_widget.disp1.sagittal.mouseMoveEvent = self.sagittal_mve
         self.central_widget.disp1.axial.mouseMoveEvent = self.axial_mve
+        self.central_widget.disp1.coronal.wheelEvent = self.coronal_we
+        self.central_widget.disp1.sagittal.wheelEvent = self.sagittal_we
+        self.central_widget.disp1.axial.wheelEvent = self.axial_we
 
     def open_files(self):
         print('Open File')
@@ -105,103 +105,58 @@ class MainWindow(QtWidgets.QMainWindow):
         self.change_current_file(str(item.text()))
 
     def change_current_file(self, f):
+        self.current_file = image_process.file_to_arr(f)
+        
+        self.central_widget.disp1.set_image(self.current_file)
+
         self.statusBar().showMessage(f'Opened: {f}')
 
-        self.current_file = image_process.file_to_arr(f)
-        self.tool_bar.x_slide.setMaximum(self.current_file.shape[0])
-        self.tool_bar.y_slide.setMaximum(self.current_file.shape[1])
-        self.tool_bar.z_slide.setMaximum(self.current_file.shape[2])
+    def coronal_we(self, event):
+        angle = event.angleDelta().y()
+        self.update_coronal(angle + self.central_widget.disp1.layers[1])
 
-        self.update_coronal(self.current_file.shape[1] // 2)
-        self.update_sagittal(self.current_file.shape[0] // 2)
-        self.update_axial(self.current_file.shape[2] // 2)
+    def sagittal_we(self, event):
+        angle = event.angleDelta().y()
+        print('scroll', angle)
+        self.update_sagittal(angle + self.central_widget.disp1.layers[0])
+
+    def axial_we(self, event):
+        angle = event.angleDelta().y()
+        print('scroll', angle, self.central_widget.disp1.layers[2])
+        self.update_axial(angle + self.central_widget.disp1.layers[2])
 
     def coronal_mve(self, event):
         x, y = event.pos().x(), event.pos().y()
         print('pos', x, y)
-        if x >= 0 and x < self.current_file.shape[0]:
-            self.update_sagittal(x)
-
-        if y >= 0 and y < self.current_file.shape[1]:
-            self.update_axial(y)
+        self.update_sagittal(x)
+        self.update_axial(self.central_widget.disp1.image.shape[2] - y)
 
     def sagittal_mve(self, event):
         x, y = event.pos().x(), event.pos().y()
         print('pos', x, y)
-        if x >= 0 and x < self.current_file.shape[1]:
-            self.update_coronal(x)
-
-        if y >= 0 and y < self.current_file.shape[2]:
-            self.update_axial(y)
+        self.update_coronal(x)
+        self.update_axial(self.central_widget.disp1.image.shape[2] - y)
 
     def axial_mve(self, event):
         x, y = event.pos().x(), event.pos().y()
         print('pos', x, y)
-        if x >= 0 and x < self.current_file.shape[0]:
-            self.update_sagittal(x)
-
-        if y >= 0 and y < self.current_file.shape[2]:
-            self.update_coronal(y)
-
-    def update_axial(self, layer):
-        if self.current_file is not None:
-            image = self.current_file
-            layer = layer if layer is int() else int(layer)
-            if 0 <= layer < image.shape[2]:
-                qImg1 = QtGui.QPixmap(
-                    QtGui.QImage(np.ascontiguousarray(np.rot90(image[:, :, layer])), image.shape[0],
-                                 image.shape[1], QtGui.QImage.Format_Grayscale8))
-
-                qImg1 = qImg1.scaled(self.central_widget.disp1.coronal.frameSize(),
-                                     aspectMode=Qt.KeepAspectRatio)
-
-                # print(image.shape[0], image.shape[1])
-                # from matplotlib import pyplot as plt
-                # plt.figure()
-                # plt.imshow(np.ascontiguousarray(np.rot90(image[:, :, layer])), cmap='gray')
-                # plt.show()
-
-                self.central_widget.disp1.axial.setPixmap(qImg1)
-                self.central_widget.disp2.axial.setPixmap(qImg1)
-                self.tool_bar.z_line.setText(str(layer))
-            else:
-                print('blank')
-
-    def update_sagittal(self, layer):
-        if self.current_file is not None:
-            image = self.current_file
-            layer = layer if layer is int() else int(layer)
-            if 0 <= layer < image.shape[0]:
-                qImg1 = QtGui.QPixmap(
-                    QtGui.QImage(np.ascontiguousarray(np.rot90(image[layer, :, :])), image.shape[1],
-                                 image.shape[2], QtGui.QImage.Format_Grayscale8))
-
-                qImg1 = qImg1.scaled(self.central_widget.disp1.sagittal.frameSize(),
-                                     aspectMode=Qt.KeepAspectRatio)
-
-                self.central_widget.disp1.sagittal.setPixmap(qImg1)
-                self.central_widget.disp2.sagittal.setPixmap(qImg1)
-                self.tool_bar.x_line.setText(str(layer))
-            else:
-                print('blank')
+        self.update_sagittal(x)
+        self.update_coronal(self.central_widget.disp1.image.shape[1] - y)
 
     def update_coronal(self, layer):
-        if self.current_file is not None:
-            image = self.current_file
-            layer = layer if layer is int() else int(layer)
-            if 0 <= layer < image.shape[1]:
-                qImg1 = QtGui.QPixmap(
-                    QtGui.QImage(np.ascontiguousarray(np.rot90(image[:, layer, :])), image.shape[0],
-                                 image.shape[2], QtGui.QImage.Format_Grayscale8))
+        self.central_widget.disp1.set_layer(layer, 1)
+        self.central_widget.disp1.update_image()
+        self.tool_bar.y_line.setText(str(layer))
 
-                qImg1 = qImg1.scaled(self.central_widget.disp1.axial.frameSize(),
-                                     aspectMode=Qt.KeepAspectRatio)
+    def update_sagittal(self, layer):
+        self.central_widget.disp1.set_layer(layer, 0)
+        self.central_widget.disp1.update_image()
+        self.tool_bar.x_line.setText(str(layer))
 
-                self.central_widget.disp1.coronal.setPixmap(qImg1)
-                self.central_widget.disp2.coronal.setPixmap(qImg1)
-                self.tool_bar.y_line.setText(str(layer))
-            else:
-                print('blank')
+    def update_axial(self, layer):
+        self.central_widget.disp1.set_layer(layer, 2)
+        self.central_widget.disp1.update_image()
+        self.tool_bar.z_line.setText(str(layer))
 
     def run(self):
         if self.filenames is not None:
