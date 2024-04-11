@@ -10,6 +10,8 @@ class iFrame(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.image = None
+        self.overlay = None
+        self.alpha = 0
         self.cmap = 'gray'
         self.minv = 0
         self.maxv = 255
@@ -51,33 +53,33 @@ class iFrame(QtWidgets.QWidget):
 
     def update_image(self):
         if self.image is not None:
-            qImg1 = np.ascontiguousarray(np.rot90(self.image[:, self.layers[1], :]))
-            qImg1 = QtGui.QImage(color_show(qImg1, self.minv, self.maxv, self.cmap),
-                                 self.image.shape[0],
-                                 self.image.shape[2],
-                                 self.image.shape[2] * 3,
-                                 QtGui.QImage.Format_RGB888)
-            qImg1 = qImg1.scaled(self.coronal.frameSize(), aspectMode=Qt.KeepAspectRatio)
+            directions = [(slice(None, None, None), self.layers[1],          slice(None, None, None)),
+                          (self.layers[0],          slice(None, None, None), slice(None, None, None)),
+                          (slice(None, None, None), slice(None, None, None), self.layers[2])]
 
-            qImg2 = np.ascontiguousarray(np.rot90(self.image[self.layers[0], :, :]))
-            qImg2 = QtGui.QImage(color_show(qImg2, self.minv, self.maxv, self.cmap),
-                                 self.image.shape[1],
-                                 self.image.shape[2],
-                                 self.image.shape[1] * 3,
-                                 QtGui.QImage.Format_RGB888)
-            qImg2 = qImg2.scaled(self.sagittal.frameSize(), aspectMode=Qt.KeepAspectRatio)
+            for i, direction in enumerate(['coronal', 'sagittal', 'axial']):
+                img_data = np.rot90(self.image[directions[i]])
+                img_data = np.ones(img_data.shape) * img_data
+                qImg = color_show(img_data, self.minv, self.maxv, self.cmap)
 
-            qImg3 = np.ascontiguousarray(np.rot90(self.image[:, :, self.layers[2]]))
-            qImg3 = QtGui.QImage(color_show(qImg3, self.minv, self.maxv, self.cmap),
-                                 self.image.shape[0],
-                                 self.image.shape[1],
-                                 self.image.shape[0] * 3,
-                                 QtGui.QImage.Format_RGB888)
-            qImg3 = qImg3.scaled(self.axial.frameSize(), aspectMode=Qt.KeepAspectRatio)
+                if self.overlay is not None:
+                    overlay = color_show(np.rot90(self.overlay[directions[i]]),
+                                         np.min(self.overlay), np.max(self.overlay), 'copper')
+                    overlay = np.ones(overlay.shape) * overlay
 
-            self.coronal.setPixmap(QtGui.QPixmap.fromImage(qImg1))
-            self.sagittal.setPixmap(QtGui.QPixmap.fromImage(qImg2))
-            self.axial.setPixmap(QtGui.QPixmap.fromImage(qImg3))
+                    mask = np.sum(overlay, axis=2)
+                    mask[mask > 0] = 1 - self.alpha
+                    mask = np.stack([mask, ]*3, axis=2)
+                    qImg = (1 - mask) * qImg + mask * overlay
+
+                qImg = QtGui.QImage(qImg.astype(np.uint8),
+                                    img_data.shape[1],
+                                    img_data.shape[0],
+                                    img_data.shape[1] * 3,
+                                    QtGui.QImage.Format_RGB888)
+                qImg = qImg.scaled(getattr(self, direction).frameSize(), aspectMode=Qt.KeepAspectRatio)
+
+                getattr(self, direction).setPixmap(QtGui.QPixmap.fromImage(qImg))
 
 
 class Canvas(QtWidgets.QWidget):

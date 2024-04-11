@@ -16,9 +16,7 @@ def color_show(img, minv, maxv, cmap):
     data[data < 0] = 0
 
     colormap = matplotlib.colormaps[cmap]
-    output = colormap(data)[..., :3] * 255
-
-    return output.astype(np.uint8)
+    return colormap(data)[..., :3] * 255
 
 
 def get_cmap():
