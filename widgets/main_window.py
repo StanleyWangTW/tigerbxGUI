@@ -1,8 +1,9 @@
 import threading
 import os
 
+import numpy as np
 from PySide6.QtCore import Qt
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtGui
 
 import tigerbx
 
@@ -18,23 +19,48 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, app):
         super().__init__()
         self.app = app
+
         self.filenames = None
         self.current_file = None
+
+        self.overlays = None
+
         self.setup_ui()
-        self.connect()
 
     def setup_ui(self):
         # menu bar
         menu_bar = self.menuBar()
 
+        # file menu
         file_menu = menu_bar.addMenu('File')
-        self.open_action = file_menu.addAction('Open')
+        open_action = file_menu.addAction('Open')
+        file_menu.addSeparator()
         file_menu.addAction('Seperate CSV')
-        self.exit_action = file_menu.addAction('Exit')
+        file_menu.addSeparator()
+        exit_action = file_menu.addAction('Exit')
 
+        open_action.triggered.connect(self.open_files)
+        exit_action.triggered.connect(self.exit)
+
+        # overlay menu
         overlay_menu = menu_bar.addMenu('Overlay')
-        add_action = overlay_menu.addAction('Add')
+        addOverlay = overlay_menu.addAction('Add')
+        clearOverlay = overlay_menu.addAction('Clear Overkays')
+        transBG = overlay_menu.addMenu('Transparency on background')
 
+        action_group = QtGui.QActionGroup(self)
+        for i in range(0, 110, 10):
+            action = QtGui.QAction(f'{i}%', self)
+            action.setCheckable(True)
+            action_group.addAction(action)
+            transBG.addAction(action)
+        action_group.setExclusive(True)
+
+        addOverlay.triggered.connect(self.add_overlay)
+        clearOverlay.triggered.connect(self.clear_overlay)
+        action_group.triggered.connect(self.setTransparencyBG)
+
+        # window menu
         window_menu = menu_bar.addMenu('Window')
 
         setting_menu = menu_bar.addMenu('Setting')
@@ -45,6 +71,16 @@ class MainWindow(QtWidgets.QMainWindow):
         # tool bar
         self.tool_bar = ToolBar()
         self.addToolBar(self.tool_bar)
+
+        self.tool_bar.y_line.valueChanged.connect(self.update_coronal)
+        self.tool_bar.x_line.valueChanged.connect(self.update_sagittal)
+        self.tool_bar.z_line.valueChanged.connect(self.update_axial)
+
+        self.tool_bar.minv.valueChanged.connect(self.change_min_max)
+        self.tool_bar.maxv.valueChanged.connect(self.change_min_max)
+
+        self.tool_bar.cmap_combobox.currentTextChanged.connect(self.change_cmap)
+        self.tool_bar.run_button.clicked.connect(self.run)
 
         # dock widgets
         self.model_dock = QtWidgets.QDockWidget(self.tr(''), self)
@@ -65,19 +101,6 @@ class MainWindow(QtWidgets.QMainWindow):
         #  central widget
         self.central_widget = Canvas()
         self.setCentralWidget(self.central_widget)
-
-    def connect(self):
-        
-        self.open_action.triggered.connect(self.open_files)
-        self.exit_action.triggered.connect(self.exit)
-
-        self.tool_bar.y_line.textEdited.connect(self.update_coronal)
-        self.tool_bar.x_line.textEdited.connect(self.update_sagittal)
-        self.tool_bar.z_line.textEdited.connect(self.update_axial)
-        self.tool_bar.run_button.clicked.connect(self.run)
-        self.tool_bar.minv.valueChanged.connect(self.change_min_max)
-        self.tool_bar.maxv.valueChanged.connect(self.change_min_max)
-        self.tool_bar.cmap_combobox.currentTextChanged.connect(self.change_cmap)
 
         self.central_widget.disp1.coronal.mouseMoveEvent = self.coronal_mve
         self.central_widget.disp1.sagittal.mouseMoveEvent = self.sagittal_mve
@@ -113,6 +136,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.central_widget.disp1.set_image(self.current_file)
         self.statusBar().showMessage(f'Opened: {f}')
 
+    # overlay
+    def add_overlay(self):
+        if self.current_file is not None:
+            print('Add Overlay')
+            self.overlays, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'select file', r'.', 'Nii Files (*.nii *.nii.gz)')
+            self.central_widget.disp1.overlay = image_process.file_to_arr(self.overlays)
+            self.central_widget.disp1.update_image()
+
+    def clear_overlay(self):
+        self.overlays = None
+        self.central_widget.disp1.overlay = self.overlays
+        self.central_widget.disp1.update_image()
+
+    def setTransparencyBG(self, action):
+        self.central_widget.disp1.alpha = float(action.text().replace('%', '')) / 100
+        self.central_widget.disp1.update_image()
+
     def coronal_we(self, event):
         print('angle', event.angleDelta().y())
         angle = 1 if event.angleDelta().y() > 0 else -1
@@ -144,17 +184,17 @@ class MainWindow(QtWidgets.QMainWindow):
     def update_coronal(self, layer):
         self.central_widget.disp1.set_layer(layer, 1)
         self.central_widget.disp1.update_image()
-        self.tool_bar.y_line.setText(str(layer))
+        self.tool_bar.y_line.setValue(layer)
 
     def update_sagittal(self, layer):
         self.central_widget.disp1.set_layer(layer, 0)
         self.central_widget.disp1.update_image()
-        self.tool_bar.x_line.setText(str(layer))
+        self.tool_bar.x_line.setValue(layer)
 
     def update_axial(self, layer):
         self.central_widget.disp1.set_layer(layer, 2)
         self.central_widget.disp1.update_image()
-        self.tool_bar.z_line.setText(str(layer))
+        self.tool_bar.z_line.setValue(layer)
 
     def change_min_max(self, value):
         minv = self.tool_bar.minv.value()
