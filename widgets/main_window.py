@@ -45,7 +45,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # overlay menu
         overlay_menu = menu_bar.addMenu('Overlay')
         addOverlay = overlay_menu.addAction('Add')
-        clearOverlay = overlay_menu.addAction('Clear Overkays')
+        clearOverlay = overlay_menu.addAction('Clear Overlays')
         transBG = overlay_menu.addMenu('Transparency on background')
 
         action_group = QtGui.QActionGroup(self)
@@ -251,7 +251,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 for f in self.filenames:
                     image_process.niif2csv(os.path.join(output_dir, os.path.basename(f)),
                                            models=mds,
-                                           seperate=models.seperate_csv)
+                                           seperate=models.seperate_csv.isChecked())
 
     def exit(self):
         self.app.quit()
