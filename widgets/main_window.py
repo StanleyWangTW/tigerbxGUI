@@ -2,8 +2,7 @@ import threading
 import os
 
 from PySide6.QtCore import Qt
-from PySide6 import QtWidgets, QtGui
-import numpy as np
+from PySide6 import QtWidgets
 
 import tigerbx
 
@@ -30,6 +29,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         file_menu = menu_bar.addMenu('File')
         self.open_action = file_menu.addAction('Open')
+        file_menu.addAction('Seperate CSV')
         self.exit_action = file_menu.addAction('Exit')
 
         overlay_menu = menu_bar.addMenu('Overlay')
@@ -106,40 +106,34 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def change_current_file(self, f):
         self.current_file = image_process.file_to_arr(f)
-        
         self.central_widget.disp1.set_image(self.current_file)
-
         self.statusBar().showMessage(f'Opened: {f}')
 
     def coronal_we(self, event):
-        angle = event.angleDelta().y()
+        print('angle', event.angleDelta().y())
+        angle = 1 if event.angleDelta().y() > 0 else -1
         self.update_coronal(angle + self.central_widget.disp1.layers[1])
 
     def sagittal_we(self, event):
         angle = event.angleDelta().y()
-        print('scroll', angle)
         self.update_sagittal(angle + self.central_widget.disp1.layers[0])
 
     def axial_we(self, event):
         angle = event.angleDelta().y()
-        print('scroll', angle, self.central_widget.disp1.layers[2])
         self.update_axial(angle + self.central_widget.disp1.layers[2])
 
     def coronal_mve(self, event):
         x, y = event.pos().x(), event.pos().y()
-        print('pos', x, y)
         self.update_sagittal(x)
         self.update_axial(self.central_widget.disp1.image.shape[2] - y)
 
     def sagittal_mve(self, event):
         x, y = event.pos().x(), event.pos().y()
-        print('pos', x, y)
         self.update_coronal(x)
         self.update_axial(self.central_widget.disp1.image.shape[2] - y)
 
     def axial_mve(self, event):
         x, y = event.pos().x(), event.pos().y()
-        print('pos', x, y)
         self.update_sagittal(x)
         self.update_coronal(self.central_widget.disp1.image.shape[1] - y)
 
@@ -160,6 +154,23 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def run(self):
         if self.filenames is not None:
+            models = self.model_dock.widget()
+
+            args = ''
+            args = args + 'm' if models.brain_mask.isChecked() else args
+            args = args + 'a' if models.aseg.isChecked() else args
+            args = args + 'b' if models.extracted_brain.isChecked() else args
+            args = args + 'B' if models.brain_age_mapping.isChecked() else args
+            args = args + 'd' if models.dgm.isChecked() else args
+            args = args + 'k' if models.dkt.isChecked() else args
+            args = args + 'c' if models.cortical_thickness.isChecked() else args
+            args = args + 'C' if models.fsl_style.isChecked() else args
+            args = args + 't' if models.tumor.isChecked() else args
+            args = args + 'w' if models.wm_parcellation.isChecked() else args
+            args = args + 'W' if models.wm_hyperintensity.isChecked() else args
+            args = args + 'q' if models.save_qc.isChecked() else args
+            args = args + 'z' if models.force_gz.isChecked() else args
+
             output_dir = 'output'
             while os.path.exists(output_dir):
                 output_dir += ' new'
@@ -167,31 +178,25 @@ class MainWindow(QtWidgets.QMainWindow):
             dlg = RunDialog(fnum=len(self.filenames), output_dir=output_dir)
             os.mkdir(output_dir)
             thread = threading.Thread(
-                target=lambda filenames=self.filenames: self.run_tigerbx(filenames, output_dir))
+                target=lambda filenames=self.filenames: tigerbx.run(args, filenames, output_dir))
 
             thread.start()
             dlg.exec()
             thread.join()
 
-    def run_tigerbx(self, filenames, output_dir):
-        models = self.model_dock.widget()
+            if models.output_csv:
+                import json
+                with open(r'model_names.json', 'r') as f:
+                    model_names = json.load(f)
 
-        args = ''
-        args = args + 'm' if models.brain_mask.isChecked() else args
-        args = args + 'a' if models.aseg.isChecked() else args
-        args = args + 'b' if models.extracted_brain.isChecked() else args
-        args = args + 'B' if models.brain_age_mapping.isChecked() else args
-        args = args + 'd' if models.dgm.isChecked() else args
-        args = args + 'k' if models.dkt.isChecked() else args
-        args = args + 'c' if models.cortical_thickness.isChecked() else args
-        args = args + 'C' if models.fsl_style.isChecked() else args
-        args = args + 't' if models.tumor.isChecked() else args
-        args = args + 'w' if models.wm_parcellation.isChecked() else args
-        args = args + 'W' if models.wm_hyperintensity.isChecked() else args
-        args = args + 'q' if models.save_qc.isChecked() else args
-        args = args + 'z' if models.force_gz.isChecked() else args
+                mds = list()
+                for a in args:
+                    mds.append(model_names[a])
 
-        tigerbx.run(args, filenames, output_dir)
+                for f in self.filenames:
+                    image_process.niif2csv(os.path.join(output_dir, os.path.basename(f)),
+                                           models=mds,
+                                           seperate=models.seperate_csv)
 
     def exit(self):
         self.app.quit()

@@ -56,3 +56,9 @@ class Models(QtWidgets.QWidget):
 
         self.force_gz = QtWidgets.QCheckBox("force_gz")
         self.gridLayout.addWidget(self.force_gz, 6, 1, 1, 1)
+
+        self.output_csv = QtWidgets.QCheckBox("output csv")
+        self.gridLayout.addWidget(self.output_csv, 7, 0, 1, 1)
+
+        self.seperate_csv = QtWidgets.QCheckBox("seperate csv")
+        self.gridLayout.addWidget(self.seperate_csv, 7, 1, 1, 1)
