@@ -2,12 +2,17 @@ import numpy as np
 from PySide6 import QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
+from utils.display import color_show, Gray
+
 
 class iFrame(QtWidgets.QWidget):
 
     def __init__(self):
         super().__init__()
         self.image = None
+        self.cmap = 'Gray'
+        self.minv = 0
+        self.maxv = 255
         self.layers = [0, 0, 0]
         layout = QtWidgets.QHBoxLayout()
         self.setLayout(layout)
@@ -45,36 +50,33 @@ class iFrame(QtWidgets.QWidget):
 
     def update_image(self):
         if self.image is not None:
-            qImg2 = QtGui.QPixmap(
-                QtGui.QImage(
-                    np.ascontiguousarray(np.rot90(self.image[self.layers[0], :, :])),
-                    self.image.shape[1],
-                    self.image.shape[2],
-                    QtGui.QImage.Format_Grayscale8))
-            qImg2 = qImg2.scaled(self.sagittal.frameSize(),
-                                 aspectMode=Qt.KeepAspectRatio)
+            qImg1 = np.ascontiguousarray(np.rot90(self.image[:, self.layers[1], :]))
+            qImg1 = QtGui.QImage(color_show(qImg1, self.minv, self.maxv, self.cmap),
+                                 self.image.shape[0],
+                                 self.image.shape[2],
+                                 self.image.shape[2] * 3,
+                                 QtGui.QImage.Format_RGB888)
+            qImg1 = qImg1.scaled(self.coronal.frameSize(), aspectMode=Qt.KeepAspectRatio)
 
-            qImg1 = QtGui.QPixmap(
-                QtGui.QImage(
-                    np.ascontiguousarray(np.rot90(self.image[:, self.layers[1], :])),
-                    self.image.shape[0],
-                    self.image.shape[2],
-                    QtGui.QImage.Format_Grayscale8))
-            qImg1 = qImg1.scaled(self.coronal.frameSize(),
-                                 aspectMode=Qt.KeepAspectRatio)
-            
-            qImg3 = QtGui.QPixmap(
-                QtGui.QImage(
-                    np.ascontiguousarray(np.rot90(self.image[:, :, self.layers[2]])),
-                    self.image.shape[0],
-                    self.image.shape[1],
-                    QtGui.QImage.Format_Grayscale8))
-            qImg3 = qImg3.scaled(self.axial.frameSize(),
-                                 aspectMode=Qt.KeepAspectRatio)
+            qImg2 = np.ascontiguousarray(np.rot90(self.image[self.layers[0], :, :]))
+            qImg2 = QtGui.QImage(color_show(qImg2, self.minv, self.maxv, self.cmap),
+                                 self.image.shape[1],
+                                 self.image.shape[2],
+                                 self.image.shape[1] * 3,
+                                 QtGui.QImage.Format_RGB888)
+            qImg2 = qImg2.scaled(self.sagittal.frameSize(), aspectMode=Qt.KeepAspectRatio)
 
-            self.coronal.setPixmap(qImg1)
-            self.sagittal.setPixmap(qImg2)
-            self.axial.setPixmap(qImg3)
+            qImg3 = np.ascontiguousarray(np.rot90(self.image[:, :, self.layers[2]]))
+            qImg3 = QtGui.QImage(color_show(qImg3, self.minv, self.maxv, self.cmap),
+                                 self.image.shape[0],
+                                 self.image.shape[1],
+                                 self.image.shape[0] * 3,
+                                 QtGui.QImage.Format_RGB888)
+            qImg3 = qImg3.scaled(self.axial.frameSize(), aspectMode=Qt.KeepAspectRatio)
+
+            self.coronal.setPixmap(QtGui.QPixmap.fromImage(qImg1))
+            self.sagittal.setPixmap(QtGui.QPixmap.fromImage(qImg2))
+            self.axial.setPixmap(QtGui.QPixmap.fromImage(qImg3))
 
 
 class Canvas(QtWidgets.QWidget):

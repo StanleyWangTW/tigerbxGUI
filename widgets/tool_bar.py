@@ -35,9 +35,21 @@ class ToolBar(QtWidgets.QToolBar):
         self.z_line = QtWidgets.QLineEdit('0')
         self.addWidget(self.z_line)
 
+        self.minv = QtWidgets.QSpinBox()
+        self.minv.setMinimum(-1000)
+        self.minv.setMaximum(1000)
+        self.minv.setValue(0)
+        self.addWidget(self.minv)
+
+        self.maxv = QtWidgets.QSpinBox()
+        self.maxv.setMinimum(-1000)
+        self.maxv.setMaximum(1000)
+        self.maxv.setValue(255)
+        self.addWidget(self.maxv)
+
         self.addWidget(QtWidgets.QLabel('color map'))
         self.cmap_combobox = QtWidgets.QComboBox()
-        self.cmap_combobox.addItems(['Gray', 'Freesurfer'])
+        self.cmap_combobox.addItems(['Gray', 'Red', 'Blue', 'Green'])
         self.addWidget(self.cmap_combobox)
 
         self.run_button = QtWidgets.QPushButton('run')

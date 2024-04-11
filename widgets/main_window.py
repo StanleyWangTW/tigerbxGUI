@@ -67,6 +67,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.central_widget)
 
     def connect(self):
+        
         self.open_action.triggered.connect(self.open_files)
         self.exit_action.triggered.connect(self.exit)
 
@@ -74,6 +75,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tool_bar.x_line.textEdited.connect(self.update_sagittal)
         self.tool_bar.z_line.textEdited.connect(self.update_axial)
         self.tool_bar.run_button.clicked.connect(self.run)
+        self.tool_bar.minv.valueChanged.connect(self.change_min_max)
+        self.tool_bar.maxv.valueChanged.connect(self.change_min_max)
+        self.tool_bar.cmap_combobox.currentTextChanged.connect(self.change_cmap)
 
         self.central_widget.disp1.coronal.mouseMoveEvent = self.coronal_mve
         self.central_widget.disp1.sagittal.mouseMoveEvent = self.sagittal_mve
@@ -151,6 +155,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.central_widget.disp1.set_layer(layer, 2)
         self.central_widget.disp1.update_image()
         self.tool_bar.z_line.setText(str(layer))
+
+    def change_min_max(self, value):
+        minv = self.tool_bar.minv.value()
+        maxv = self.tool_bar.maxv.value()
+        self.central_widget.disp1.minv = minv
+        self.central_widget.disp1.maxv = maxv
+        self.central_widget.disp1.update_image()
+
+    def change_cmap(self, cmap):
+        self.central_widget.disp1.cmap = cmap
+        self.central_widget.disp1.update_image()
 
     def run(self):
         if self.filenames is not None:
