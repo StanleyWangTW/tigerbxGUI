@@ -1,6 +1,7 @@
 import threading
 import os
 
+import numpy as np
 from PySide6.QtCore import Qt
 from PySide6 import QtWidgets
 
@@ -67,17 +68,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.central_widget)
 
     def connect(self):
-        
         self.open_action.triggered.connect(self.open_files)
         self.exit_action.triggered.connect(self.exit)
 
-        self.tool_bar.y_line.textEdited.connect(self.update_coronal)
-        self.tool_bar.x_line.textEdited.connect(self.update_sagittal)
-        self.tool_bar.z_line.textEdited.connect(self.update_axial)
-        self.tool_bar.run_button.clicked.connect(self.run)
+        # tool bar
+        self.tool_bar.y_line.valueChanged.connect(self.update_coronal)
+        self.tool_bar.x_line.valueChanged.connect(self.update_sagittal)
+        self.tool_bar.z_line.valueChanged.connect(self.update_axial)
+
         self.tool_bar.minv.valueChanged.connect(self.change_min_max)
         self.tool_bar.maxv.valueChanged.connect(self.change_min_max)
+
         self.tool_bar.cmap_combobox.currentTextChanged.connect(self.change_cmap)
+        self.tool_bar.run_button.clicked.connect(self.run)
 
         self.central_widget.disp1.coronal.mouseMoveEvent = self.coronal_mve
         self.central_widget.disp1.sagittal.mouseMoveEvent = self.sagittal_mve
@@ -144,17 +147,17 @@ class MainWindow(QtWidgets.QMainWindow):
     def update_coronal(self, layer):
         self.central_widget.disp1.set_layer(layer, 1)
         self.central_widget.disp1.update_image()
-        self.tool_bar.y_line.setText(str(layer))
+        self.tool_bar.y_line.setValue(layer)
 
     def update_sagittal(self, layer):
         self.central_widget.disp1.set_layer(layer, 0)
         self.central_widget.disp1.update_image()
-        self.tool_bar.x_line.setText(str(layer))
+        self.tool_bar.x_line.setValue(layer)
 
     def update_axial(self, layer):
         self.central_widget.disp1.set_layer(layer, 2)
         self.central_widget.disp1.update_image()
-        self.tool_bar.z_line.setText(str(layer))
+        self.tool_bar.z_line.setValue(layer)
 
     def change_min_max(self, value):
         minv = self.tool_bar.minv.value()

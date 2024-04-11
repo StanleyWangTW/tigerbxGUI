@@ -2,7 +2,7 @@ import numpy as np
 from PySide6 import QtWidgets, QtGui
 from PySide6.QtCore import Qt
 
-from utils.display import color_show, Gray
+from utils.display import color_show
 
 
 class iFrame(QtWidgets.QWidget):
@@ -10,7 +10,7 @@ class iFrame(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.image = None
-        self.cmap = 'Gray'
+        self.cmap = 'gray'
         self.minv = 0
         self.maxv = 255
         self.layers = [0, 0, 0]
@@ -35,6 +35,7 @@ class iFrame(QtWidgets.QWidget):
         self.axial.mouseMoveEvent = self.mouseMoveEvent
 
     def set_layer(self, layer, i):
+        layer = int(layer)
         if 0 <= layer < self.image.shape[i]:
             self.layers[i] = layer
 
