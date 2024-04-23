@@ -9,6 +9,8 @@ class iFrame(QtWidgets.QWidget):
 
     def __init__(self):
         super().__init__()
+        # self.setStyleSheet("background-color: black;")
+
         self.image = None
         self.overlay = None
         self.alpha = 0
@@ -17,24 +19,21 @@ class iFrame(QtWidgets.QWidget):
         self.maxv = 255
         self.layers = [0, 0, 0]
         layout = QtWidgets.QHBoxLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
-        self.coronal = QtWidgets.QLabel()
-        self.coronal.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        layout.addWidget(self.coronal)
-
-        self.sagittal = QtWidgets.QLabel()
-        self.sagittal.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                    QtWidgets.QSizePolicy.Expanding)
-        layout.addWidget(self.sagittal)
-
-        self.axial = QtWidgets.QLabel()
-        self.axial.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        layout.addWidget(self.axial)
-
-        self.coronal.mouseMoveEvent = self.mouseMoveEvent
-        self.sagittal.mouseMoveEvent = self.mouseMoveEvent
-        self.axial.mouseMoveEvent = self.mouseMoveEvent
+        labels = ['coronal', 'sagittal', 'axial']
+        for label_name in labels:
+            label = QtWidgets.QLabel()
+            setattr(self, label_name, label)
+            label.setMinimumHeight(100)
+            label.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                QtWidgets.QSizePolicy.Expanding)
+            # label.setStyleSheet("background-color: black;")
+            if not label_name == 'axial':
+                layout.addWidget(label)
+            label.mouseMoveEvent = self.mouseMoveEvent
 
     def set_layer(self, layer, i):
         layer = int(layer)
@@ -87,10 +86,10 @@ class Canvas(QtWidgets.QWidget):
     def __init__(self):
         super(Canvas, self).__init__()
 
-        v_layout = QtWidgets.QVBoxLayout()
-        self.setLayout(v_layout)
-
         self.disp1 = iFrame()
-        v_layout.addWidget(self.disp1, 1)
         self.disp2 = iFrame()
-        v_layout.addWidget(self.disp2, 1)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.setSpacing(0)
+        layout.addWidget(self.disp1, 1)
+        self.setLayout(layout)
