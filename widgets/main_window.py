@@ -99,15 +99,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.output_dock)
 
         #  central widget
-        self.central_widget = Canvas()
+        self.central_widget = Canvas(self.tool_bar)
         self.setCentralWidget(self.central_widget)
-
-        self.central_widget.disp1.coronal.mouseMoveEvent = self.coronal_mve
-        self.central_widget.disp1.sagittal.mouseMoveEvent = self.sagittal_mve
-        self.central_widget.disp1.axial.mouseMoveEvent = self.axial_mve
-        self.central_widget.disp1.coronal.wheelEvent = self.coronal_we
-        self.central_widget.disp1.sagittal.wheelEvent = self.sagittal_we
-        self.central_widget.disp1.axial.wheelEvent = self.axial_we
 
     def open_files(self):
         print('Open File')
@@ -153,48 +146,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.central_widget.disp1.alpha = float(action.text().replace('%', '')) / 100
         self.central_widget.disp1.update_image()
 
-    def coronal_we(self, event):
-        print('angle', event.angleDelta().y())
-        angle = 1 if event.angleDelta().y() > 0 else -1
-        self.update_coronal(angle + self.central_widget.disp1.layers[1])
-
-    def sagittal_we(self, event):
-        angle = event.angleDelta().y()
-        self.update_sagittal(angle + self.central_widget.disp1.layers[0])
-
-    def axial_we(self, event):
-        angle = event.angleDelta().y()
-        self.update_axial(angle + self.central_widget.disp1.layers[2])
-
-    def coronal_mve(self, event):
-        x, y = event.pos().x(), event.pos().y()
-        self.update_sagittal(x)
-        self.update_axial(self.central_widget.disp1.image.shape[2] - y)
-
-    def sagittal_mve(self, event):
-        x, y = event.pos().x(), event.pos().y()
-        self.update_coronal(x)
-        self.update_axial(self.central_widget.disp1.image.shape[2] - y)
-
-    def axial_mve(self, event):
-        x, y = event.pos().x(), event.pos().y()
-        self.update_sagittal(x)
-        self.update_coronal(self.central_widget.disp1.image.shape[1] - y)
-
     def update_coronal(self, layer):
         self.central_widget.disp1.set_layer(layer, 1)
-        self.central_widget.disp1.update_image()
-        self.tool_bar.y_line.setValue(layer)
 
     def update_sagittal(self, layer):
         self.central_widget.disp1.set_layer(layer, 0)
-        self.central_widget.disp1.update_image()
-        self.tool_bar.x_line.setValue(layer)
 
     def update_axial(self, layer):
         self.central_widget.disp1.set_layer(layer, 2)
-        self.central_widget.disp1.update_image()
-        self.tool_bar.z_line.setValue(layer)
 
     def change_min_max(self, value):
         minv = self.tool_bar.minv.value()
