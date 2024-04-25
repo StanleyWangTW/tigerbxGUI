@@ -44,9 +44,9 @@ class iFrame(QtWidgets.QLabel):
     def set_image(self, image):
         self.image = image
         # RAS: R:0, A:1, S:2
-        self.R = image.shape[0]
-        self.A = image.shape[1]
-        self.S = image.shape[2]
+        self.R = self.image.shape[0]
+        self.A = self.image.shape[1]
+        self.S = self.image.shape[2]
         self.set_layers(np.array(self.image.shape) // 2)
         self.update_image()
 
