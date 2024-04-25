@@ -41,16 +41,3 @@ def freesurfer_cmap(img):
         output[mask] = color_broadcasted[mask]
 
     return output
-
-
-if __name__ == '__main__':    
-    import nibabel as nib
-    data = nib.load(r'CANDI_BPDwoPsy_030.nii.gz').get_fdata()[100, :, :]
-    print(get_cmap()(np.unique(data)) * 255)
-    data = color_show(data, 0, 60, 'freesurfer')
-    print(data)
-    import matplotlib.pyplot as plt
-    plt.imshow(data)
-    plt.colorbar()
-    plt.axis('off')  # 关闭坐标轴
-    plt.show()

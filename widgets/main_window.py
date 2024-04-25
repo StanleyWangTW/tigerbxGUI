@@ -35,8 +35,6 @@ class MainWindow(QtWidgets.QMainWindow):
         file_menu = menu_bar.addMenu('File')
         open_action = file_menu.addAction('Open')
         file_menu.addSeparator()
-        file_menu.addAction('Seperate CSV')
-        file_menu.addSeparator()
         exit_action = file_menu.addAction('Exit')
 
         open_action.triggered.connect(self.open_files)
@@ -80,6 +78,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tool_bar.maxv.valueChanged.connect(self.change_min_max)
 
         self.tool_bar.cmap_combobox.currentTextChanged.connect(self.change_cmap)
+        self.tool_bar.overlay_cmap_cbb.currentTextChanged.connect(self.change_overlay_cmap)
         self.tool_bar.run_button.clicked.connect(self.run)
 
         # dock widgets
@@ -103,7 +102,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.central_widget)
 
     def open_files(self):
-        print('Open File')
         self.filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'select file', r'.',
                                                                    'Nii Files (*.nii *.nii.gz)')
 
@@ -166,6 +164,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.central_widget.disp1.cmap = cmap
         self.central_widget.disp1.update_image()
 
+    def change_overlay_cmap(self, cmap):
+        self.central_widget.disp1.overlay_cmap = cmap
+        self.central_widget.disp1.update_image()
+
     def run(self):
         if self.filenames is not None:
             models = self.model_dock.widget()
@@ -209,8 +211,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 for f in self.filenames:
                     image_process.niif2csv(os.path.join(output_dir, os.path.basename(f)),
-                                           models=mds,
-                                           seperate=models.seperate_csv.isChecked())
+                                           models=mds)
 
     def exit(self):
         self.app.quit()
