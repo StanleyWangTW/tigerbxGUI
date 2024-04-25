@@ -22,7 +22,7 @@ class iFrame(QtWidgets.QLabel):
         self.maxv = 255
         self.layers = [0, 0, 0]
         self.tool_bar = tool_bar
-
+        
     def set_layer(self, layer, i):
         layer = int(layer)
         if 0 <= layer < self.image.shape[i]:
@@ -119,7 +119,7 @@ class iFrame(QtWidgets.QLabel):
             y = y - self.S - 1
             self.set_layer(x, 0)
             self.set_layer(self.A-y-1, 1)
-
+        
         return super().mouseMoveEvent(event)
     
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
@@ -141,6 +141,12 @@ class iFrame(QtWidgets.QLabel):
             self.set_layer(angle + self.layers[2], 2)
 
         return super().wheelEvent(event)
+
+    def enterEvent(self, event):
+        self.setCursor(Qt.CrossCursor)
+
+    def leaveEvent(self, event):
+        self.setCursor(Qt.ArrowCursor)
 
 
 class Canvas(QtWidgets.QWidget):
