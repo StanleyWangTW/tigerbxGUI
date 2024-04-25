@@ -1,6 +1,7 @@
 import numpy as np
-from PySide6 import QtWidgets, QtGui
+from PySide6 import QtWidgets, QtGui, QtCore
 from PySide6.QtGui import QPixmap, Qt
+import mahotas
 
 from utils.display import color_show
 
@@ -16,6 +17,8 @@ class iFrame(QtWidgets.QLabel):
         self.image = None
         self.scr = None
         self.overlay = None
+        self.draw = True # draw label flag
+        self.coords = [] # coords for polygon drawing
         self.alpha = 0
         self.cmap = 'gray'
         self.overlay_cmap = 'freesurfer'
@@ -156,7 +159,6 @@ class iFrame(QtWidgets.QLabel):
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
         if self.image is not None:
             x, y = event.position().x(), event.position().y()
-
             x = int(x * self.scr.shape[1]/self.pixmap().size().width())
             y = int(y * self.scr.shape[0]/self.pixmap().size().height())
 
@@ -173,6 +175,25 @@ class iFrame(QtWidgets.QLabel):
                 self.set_layer(angle + self.layers[2], 2)
 
         return super().wheelEvent(event)
+    
+    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
+        if self.draw:
+
+            if event.button() == QtCore.Qt.LeftButton:
+                x, y = event.position().x(), event.position().y()
+                x = int(x * self.scr.shape[1]/self.pixmap().size().width())
+                y = int(y * self.scr.shape[0]/self.pixmap().size().height())
+
+                if 0 <= x < self.R and 0 <= y < self.S: # mouse in coronal plane
+                    self.coords.append([x, self.S - y - 1])
+
+            elif event.button() == QtCore.Qt.RightButton:
+                mahotas.polygon.fill_polygon(self.coords, self.image[:, self.layers[1], :], color=self.tool_bar.pen_label)
+                self.coords.clear()
+
+            self.update_image()
+
+            
 
     def enterEvent(self, event):
         self.setCursor(Qt.CrossCursor)
