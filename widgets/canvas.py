@@ -18,8 +18,9 @@ class iFrame(QtWidgets.QLabel):
         self.overlay = None
         self.alpha = 0
         self.cmap = 'gray'
+        self.overlay_cmap = 'freesurfer'
         self.minv = 0
-        self.maxv = 255
+        self.maxv = 0
         self.layers = [0, 0, 0]
         self.tool_bar = tool_bar
         
@@ -27,28 +28,55 @@ class iFrame(QtWidgets.QLabel):
         layer = int(layer)
         if 0 <= layer < self.image.shape[i]:
             self.layers[i] = layer
-
             if i==0:
                 self.tool_bar.x_line.setValue(self.layers[0])
             elif i==1:
                 self.tool_bar.y_line.setValue(self.layers[1])
             elif i==2:
                 self.tool_bar.z_line.setValue(self.layers[2])
-        
+
         self.update_image()
 
     def set_layers(self, layers):
-        for i, layer in enumerate(layers):
-            self.set_layer(layer, i)
+        for i in range(3):
+            layers[i] = int(layers[i])
+            if 0 <= layers[i] < self.image.shape[i]:
+                self.layers[i] = layers[i]
+
+        self.tool_bar.x_line.setValue(self.layers[0])
+        self.tool_bar.y_line.setValue(self.layers[1])
+        self.tool_bar.z_line.setValue(self.layers[2])
+        self.update_image()
 
     def set_image(self, image):
         self.image = image
+        self.minv = np.min(self.image)
+        self.maxv = np.max(self.image)
+        self.tool_bar.minv.setValue(self.minv)
+        self.tool_bar.maxv.setValue(self.maxv)
         # RAS: R:0, A:1, S:2
         self.R = self.image.shape[0]
         self.A = self.image.shape[1]
         self.S = self.image.shape[2]
         self.set_layers(np.array(self.image.shape) // 2)
-        self.update_image()
+
+    def show_cross(self, img, plane):
+        color = np.array([0, 0, 255]) # blue
+
+        if plane == 'coronal':
+            img[self.S - self.layers[2] - 1, :, :] = color # row 
+            img[:, self.layers[0], :] = color # col
+
+        elif plane == 'sagittal':
+            img[self.S - self.layers[2] - 1, :, :] = color # row 
+            img[:, self.layers[1], :] = color # col
+
+        elif plane == 'axial':
+            img[self.A - self.layers[1] - 1, :, :] = color # row 
+            img[:, self.layers[0], :] = color # col
+
+        return img
+
 
     def update_image(self):
         if self.image is not None:
@@ -65,13 +93,15 @@ class iFrame(QtWidgets.QLabel):
 
                 if self.overlay is not None:
                     overlay = color_show(np.rot90(self.overlay[directions[i]]),
-                                         np.min(self.overlay), np.max(self.overlay), 'copper')
+                                         np.min(self.overlay), np.max(self.overlay), self.overlay_cmap)
                     overlay = np.ones(overlay.shape) * overlay
 
                     mask = np.sum(overlay, axis=2)
                     mask[mask > 0] = 1 - self.alpha
                     mask = np.stack([mask, ]*3, axis=2)
                     img_data = (1 - mask) * img_data + mask * overlay
+
+                img_data = self.show_cross(img_data, direction)
 
                 if i==0:
                     self.scr[0:self.S, 0:self.R, :] = img_data
@@ -101,44 +131,46 @@ class iFrame(QtWidgets.QLabel):
         return super().resizeEvent(event)
     
     def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
-        x, y = event.pos().x(), event.pos().y()
+        if self.image is not None:
+            x, y = event.pos().x(), event.pos().y()
 
-        x = int(x * self.scr.shape[1]/self.pixmap().size().width())
-        y = int(y * self.scr.shape[0]/self.pixmap().size().height())
-        
-        if 0 <= x < self.R and 0 <= y < self.S: # mouse in coronal plane
-            self.set_layer(x, 0)
-            self.set_layer(self.S-y-1, 2)
+            x = int(x * self.scr.shape[1]/self.pixmap().size().width())
+            y = int(y * self.scr.shape[0]/self.pixmap().size().height())
+            
+            if 0 <= x < self.R and 0 <= y < self.S: # mouse in coronal plane
+                self.set_layer(x, 0)
+                self.set_layer(self.S-y-1, 2)
 
-        elif self.R < x <= (self.R + self.A) and 0 <= y < self.S: # mouse in sagittal plane
-            x = x - self.R - 1
-            self.set_layer(x, 1)
-            self.set_layer(self.S-y-1, 2)
+            elif self.R < x <= (self.R + self.A) and 0 <= y < self.S: # mouse in sagittal plane
+                x = x - self.R - 1
+                self.set_layer(x, 1)
+                self.set_layer(self.S-y-1, 2)
 
-        elif 0 <= x < self.R and self.S < y <= self.S + self.A: # mouse in axial plane
-            y = y - self.S - 1
-            self.set_layer(x, 0)
-            self.set_layer(self.A-y-1, 1)
+            elif 0 <= x < self.R and self.S < y <= self.S + self.A: # mouse in axial plane
+                y = y - self.S - 1
+                self.set_layer(x, 0)
+                self.set_layer(self.A-y-1, 1)
         
         return super().mouseMoveEvent(event)
     
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
-        x, y = event.position().x(), event.position().y()
+        if self.image is not None:
+            x, y = event.position().x(), event.position().y()
 
-        x = int(x * self.scr.shape[1]/self.pixmap().size().width())
-        y = int(y * self.scr.shape[0]/self.pixmap().size().height())
+            x = int(x * self.scr.shape[1]/self.pixmap().size().width())
+            y = int(y * self.scr.shape[0]/self.pixmap().size().height())
 
-        if 0 <= x < self.R and 0 <= y < self.S: # mouse in coronal plane
-            angle = 1 if event.angleDelta().y() > 0 else -1
-            self.set_layer(angle + self.layers[1], 1)
+            if 0 <= x < self.R and 0 <= y < self.S: # mouse in coronal plane
+                angle = 1 if event.angleDelta().y() > 0 else -1
+                self.set_layer(angle + self.layers[1], 1)
 
-        elif self.R < x <= (self.R + self.A) and 0 <= y < self.S: # mouse in sagittal plane
-            angle = 1 if event.angleDelta().y() > 0 else -1
-            self.set_layer(angle + self.layers[0], 0)
+            elif self.R < x <= (self.R + self.A) and 0 <= y < self.S: # mouse in sagittal plane
+                angle = 1 if event.angleDelta().y() > 0 else -1
+                self.set_layer(angle + self.layers[0], 0)
 
-        elif 0 <= x < self.R and self.S < y <= self.S + self.A: # mouse in axial plane
-            angle = 1 if event.angleDelta().y() > 0 else -1
-            self.set_layer(angle + self.layers[2], 2)
+            elif 0 <= x < self.R and self.S < y <= self.S + self.A: # mouse in axial plane
+                angle = 1 if event.angleDelta().y() > 0 else -1
+                self.set_layer(angle + self.layers[2], 2)
 
         return super().wheelEvent(event)
 
