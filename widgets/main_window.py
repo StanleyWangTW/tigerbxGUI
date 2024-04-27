@@ -1,43 +1,46 @@
 import threading
 import os
 
-import numpy as np
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QObject, Qt
 from PySide6 import QtWidgets, QtGui
-
+from PySide6.QtWidgets import QFileDialog
+from PySide6.QtCore import Qt, QThread, Signal
 import tigerbx
 
 from .tool_bar import ToolBar
 from .models import Models
 from .canvas import Canvas
-from .run_dialog import RunDialog
+from .run_dialog import RunningDialog
 from utils import image_process
 
 
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, app):
-        super().__init__()
-        self.app = app
-
         self.filenames = None
         self.current_file = None
-
         self.overlays = None
+        self.output_dir = 'output'
 
+        super().__init__()
+        self.app = app
         self.setup_ui()
 
     def setup_ui(self):
+        self.setWindowTitle('TigerBx')
+
         # menu bar
         menu_bar = self.menuBar()
 
         # file menu
         file_menu = menu_bar.addMenu('File')
         open_action = file_menu.addAction('Open')
+        select_output = file_menu.addAction('choose output folder')
         file_menu.addSeparator()
         exit_action = file_menu.addAction('Exit')
 
         open_action.triggered.connect(self.open_files)
+        select_output.triggered.connect(self.select_folder)
         exit_action.triggered.connect(self.exit)
 
         # overlay menu
@@ -60,9 +63,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # window menu
         window_menu = menu_bar.addMenu('Window')
-
         setting_menu = menu_bar.addMenu('Setting')
-
         help_menu = menu_bar.addMenu('Help')
         about_action = help_menu.addAction('About')
 
@@ -92,10 +93,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_dock.setWidget(self.file_list_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
 
-        self.output_dock = QtWidgets.QDockWidget(self.tr('Output Files'))
-        self.output_list_widget = QtWidgets.QListWidget()
-        self.output_dock.setWidget(self.output_list_widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.output_dock)
+        # self.output_dock = QtWidgets.QDockWidget(self.tr('Output Files'))
+        # self.output_list_widget = QtWidgets.QListWidget()
+        # self.output_dock.setWidget(self.output_list_widget)
+        # self.addDockWidget(Qt.LeftDockWidgetArea, self.output_dock)
 
         #  central widget
         self.central_widget = Canvas(self.tool_bar)
@@ -126,6 +127,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_file = image_process.file_to_arr(f)
         self.central_widget.disp1.set_image(self.current_file)
         self.statusBar().showMessage(f'Opened: {f}')
+
+    def select_folder(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.ShowDirsOnly
+        folder_path = QFileDialog.getExistingDirectory(self, 'Select Folder', r'.', options=options)
+        self.output_dir = folder_path
 
     # overlay
     def add_overlay(self):
@@ -187,31 +194,44 @@ class MainWindow(QtWidgets.QMainWindow):
             args = args + 'q' if models.save_qc.isChecked() else args
             args = args + 'z' if models.force_gz.isChecked() else args
 
-            output_dir = 'output'
-            while os.path.exists(output_dir):
-                output_dir += ' new'
-
-            dlg = RunDialog(fnum=len(self.filenames), output_dir=output_dir)
-            os.mkdir(output_dir)
-            thread = threading.Thread(
-                target=lambda filenames=self.filenames: tigerbx.run(args, filenames, output_dir))
-
-            thread.start()
-            dlg.exec()
-            thread.join()
-
-            if models.output_csv:
-                import json
-                with open(r'model_names.json', 'r') as f:
-                    model_names = json.load(f)
-
-                mds = list()
-                for a in args:
-                    mds.append(model_names[a])
-
-                for f in self.filenames:
-                    image_process.niif2csv(os.path.join(output_dir, os.path.basename(f)),
-                                           models=mds)
+            dialog = RunningDialog(self)
+            dialog.show()
+            self.thread = RunTigerBx(args, self.filenames, self.output_dir, models.output_csv.isChecked())
+            self.thread.creating_csv.connect(dialog.creating_csv)
+            self.thread.finished.connect(dialog.close)
+            self.thread.start()
 
     def exit(self):
         self.app.quit()
+
+
+class RunTigerBx(QThread):
+    finished = Signal()
+    creating_csv = Signal()
+
+    def __init__(self, args, filenames, output_dir, output_csv) -> None:
+        self.args = args
+        self.filenames = filenames
+        self.output_dir = output_dir
+        self.output_csv = output_csv
+        super().__init__()
+
+    def run(self):
+        tigerbx.run(self.args, self.filenames, self.output_dir)
+
+        if self.output_csv:
+            self.creating_csv.emit()
+            model_names = {
+                "a": "aseg",
+                "d": "dgm"
+            }
+            mds = list()
+            for a in self.args:
+                model_name = model_names.get(a)
+                if model_name is not None:
+                    mds.append(model_name)
+
+            for f in self.filenames:
+                image_process.niif2csv(os.path.join(self.output_dir, os.path.basename(f)), mds)
+
+        self.finished.emit()

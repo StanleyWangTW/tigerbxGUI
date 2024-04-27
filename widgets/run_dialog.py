@@ -1,7 +1,8 @@
 import os
 
 from PySide6 import QtWidgets
-import PySide6.QtCore as Qt
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel
+from PySide6.QtCore import Qt
 
 
 class RunDialog(QtWidgets.QDialog):
@@ -18,11 +19,12 @@ class RunDialog(QtWidgets.QDialog):
 
     def setup_ui(self):
         self.setWindowTitle(f'Running 1 of {self.fnum}')
-        v_layout = QtWidgets.QVBoxLayout()
 
         self.pbar = QtWidgets.QProgressBar()
         self.pbar.setValue(0)
         self.pbar.setMaximum(self.fnum)
+
+        v_layout = QtWidgets.QVBoxLayout()
         v_layout.addWidget(self.pbar)
         self.setLayout(v_layout)
 
@@ -39,8 +41,8 @@ class RunDialog(QtWidgets.QDialog):
 
     def if_finish(self, value):
         if value == self.pbar.maximum():
-            finish_dialog = FinishDialog()
-            finish_dialog.exec()
+            # finish_dialog = FinishDialog()
+            # finish_dialog.exec()
             self.accept()
 
 
@@ -49,13 +51,33 @@ class FinishDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setWindowTitle("FINISH")
+        self.setWindowTitle("finish")
         QBtn = QtWidgets.QDialogButtonBox.Ok
         self.buttonBox = QtWidgets.QDialogButtonBox(QBtn)
-        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.accepted.connect(self.close)
 
         self.layout = QtWidgets.QVBoxLayout()
-        message = QtWidgets.QLabel('Segmentation finished')
+        message = QtWidgets.QLabel('Finished')
         self.layout.addWidget(message)
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
+
+
+class RunningDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle('running')
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.layout = QVBoxLayout(self)
+        self.label = QLabel('Running segmentation...', self)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.label)
+
+        self.finish_dialog = FinishDialog()
+
+    def creating_csv(self):
+        self.label.setText('Creating CSV reports...')
+    
+    def close(self) -> bool:
+        self.finish_dialog.show()
+        return super().close()
