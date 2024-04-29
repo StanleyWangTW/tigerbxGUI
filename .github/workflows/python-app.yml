@@ -33,9 +33,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # pip install .
         pip install pyinstaller
-        # if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install onnxruntime
+        pip install onnxruntime-gpu
+        pip install https://github.com/htylab/tigerbx/archive/main.zip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Run Pyinstaller 1
       if: matrix.os == 'windows-latest'
       run: |
