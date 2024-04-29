@@ -39,15 +39,15 @@ jobs:
     - name: Run Pyinstaller 1
       if: matrix.os == 'windows-latest'
       run: |
-        pyinstaller -c -p . -F ./${{ matrix.py }}.py
+        pyinstaller -p . -F ./${{ matrix.py }}.py
     - name: Run Pyinstaller 2
       if: matrix.os == 'ubuntu-20.04'
       run: |
-        pyinstaller -c -p . -F ./${{ matrix.py }}.py
+        pyinstaller -p . -F ./${{ matrix.py }}.py
     - name: Run Pyinstaller 3
       if: matrix.os == 'macos-latest'
       run: |
-        pyinstaller -c -p . -F ./${{ matrix.py }}.py
+        pyinstaller -p . -F ./${{ matrix.py }}.py
 
     - uses: actions/upload-artifact@v3
       with:
