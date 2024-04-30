@@ -1,0 +1,106 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: release
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: Test Action Release
+
+      - name: Create release url file
+        run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+
+      - name: Save release url file for publish
+        uses: actions/upload-artifact@v1
+        with:
+          name: release_url
+          path: release_url.txt
+
+      - name: Save release url file for publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_url
+          path: release_url.txt
+
+  publish:
+    needs: [release]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        py: [main]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install onnxruntime
+        # pip install onnxruntime-gpu
+        pip install https://github.com/htylab/tigerbx/archive/main.zip
+        pip install -r requirements.txt
+
+    - name: Run Pyinstaller
+      run: |
+        pyinstaller -p . -F ./${{ matrix.py }}.py
+
+    - name: Load release url file from release job
+      uses: actions/download-artifact@v1
+      with:
+        name: release_url
+
+    - name: Get release file name & upload url
+      id: get_release_info
+      run: |
+        echo "::set-output name=upload_url::$(cat release_url/release_url.txt)"
+
+    - name: Upload release executable on Windows
+      id: upload_release_executable_windows 
+      if: runner.os == 'Windows'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+        asset_path: ./dist/main.exe
+        asset_name: tigerBX-GUI.exe
+        asset_content_type: application/octet-stream
+
+    - name: Upload release executable on macOS & Linux
+      id: upload_release_executable_macos_linux
+      if: runner.os != 'Windows'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+        asset_path: ./dist/main
+        asset_name: tigerBX-GUI-${{ runner.os }}
+        asset_content_type: application/octet-stream
