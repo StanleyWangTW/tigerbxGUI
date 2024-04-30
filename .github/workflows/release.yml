@@ -48,7 +48,7 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          body: Test Action Release
+          body: ${{ steps.github_release.outputs.changelog }}
 
       - name: Create release url file
         run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
