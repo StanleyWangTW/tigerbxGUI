@@ -5,13 +5,16 @@ from PySide6.QtCore import QObject, Qt
 from PySide6 import QtWidgets, QtGui
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtCore import Qt, QThread, Signal
+import numpy as np
 import tigerbx
 
 from .tool_bar import ToolBar
 from .models import Models
 from .canvas import Canvas
+from .file_list import FileList
 from .run_dialog import RunningDialog
-from utils import image_process
+from .label_editor import LeftWidget, LabelList, Label
+from utils import image_process, load_labels
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -82,21 +85,29 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tool_bar.overlay_cmap_cbb.currentTextChanged.connect(self.change_overlay_cmap)
         self.tool_bar.run_button.clicked.connect(self.run)
 
-        # dock widgets
-        self.model_dock = QtWidgets.QDockWidget(self.tr(''), self)
-        self.model_dock.setWidget(Models())
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.model_dock)
-
-        self.file_dock = QtWidgets.QDockWidget(self.tr('Input Files'))
-        self.file_list_widget = QtWidgets.QListWidget()
+        # left dock widgets
+        self.page1 = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout()
+        self.models = Models()
+        layout.addWidget(self.models)
+        self.file_list_widget = FileList()
         self.file_list_widget.itemSelectionChanged.connect(self.file_selection_changed)
-        self.file_dock.setWidget(self.file_list_widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
+        file_group = QtWidgets.QGroupBox()
+        file_group.setTitle('Files')
+        file_group_layout = QtWidgets.QVBoxLayout()
+        file_group_layout.addWidget(self.file_list_widget)
+        file_group.setLayout(file_group_layout)
+        layout.addWidget(file_group)
+        self.page1.setLayout(layout)
 
-        # self.output_dock = QtWidgets.QDockWidget(self.tr('Output Files'))
-        # self.output_list_widget = QtWidgets.QListWidget()
-        # self.output_dock.setWidget(self.output_list_widget)
-        # self.addDockWidget(Qt.LeftDockWidgetArea, self.output_dock)
+        self.label_list = LabelList()
+
+        w = LeftWidget()
+        w.addTab(self.page1, 'Files')
+        w.addTab(self.label_list, 'labels')
+        self.left_dock = QtWidgets.QDockWidget()
+        self.left_dock.setWidget(w)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.left_dock)
 
         #  central widget
         self.central_widget = Canvas(self.tool_bar)
@@ -136,14 +147,24 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # overlay
     def add_overlay(self):
+        def read_labels(filename):
+            overlay = image_process.file_to_arr(filename).astype(np.int32)
+            unique_values = np.unique(overlay)
+            labels = load_labels()
+            for value in unique_values:
+                if value in labels.keys():
+                    self.label_list.addLabel(value, labels[value])
+
+
         if self.current_file is not None:
-            print('Add Overlay')
             self.overlays, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'select file', r'.', 'Nii Files (*.nii *.nii.gz)')
+            read_labels(self.overlays)
             self.central_widget.disp1.overlay = image_process.file_to_arr(self.overlays)
             self.central_widget.disp1.update_image()
 
     def clear_overlay(self):
         self.overlays = None
+        self.label_list.clear()
         self.central_widget.disp1.overlay = self.overlays
         self.central_widget.disp1.update_image()
 
@@ -177,7 +198,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def run(self):
         if self.filenames is not None:
-            models = self.model_dock.widget()
+            models = self.models()
 
             args = ''
             args = args + 'm' if models.brain_mask.isChecked() else args
