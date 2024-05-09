@@ -1,3 +1,5 @@
+import os.path as osp
+
 import numpy as np
 
 class Label():
@@ -24,7 +26,8 @@ def load_labels():
     return labels
 
 
-LABEL_LUT = r'FreeSurferColorLUT.txt'
+here = osp.dirname(osp.abspath(__file__))
+LABEL_LUT = osp.join(here, r'../FreeSurferColorLUT.txt')
 
 DGM_LABEL = {
     "Left-Thalamus-Proper": 1,
