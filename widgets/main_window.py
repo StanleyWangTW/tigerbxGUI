@@ -210,6 +210,7 @@ class MainWindow(QtWidgets.QMainWindow):
             args = args + 'k' if models.dkt.isChecked() else args
             args = args + 'c' if models.cortical_thickness.isChecked() else args
             args = args + 'C' if models.fsl_style.isChecked() else args
+            args = args + 'S' if models.synthseg_like.isChecked() else args
             args = args + 't' if models.tumor.isChecked() else args
             args = args + 'w' if models.wm_parcellation.isChecked() else args
             args = args + 'W' if models.wm_hyperintensity.isChecked() else args
@@ -238,7 +239,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 class RunTigerBx(QThread):
-    # finished = Signal()
     creating_csv = Signal()
 
     def __init__(self, args, filenames, output_dir, output_csv) -> None:
@@ -257,8 +257,9 @@ class RunTigerBx(QThread):
                 "a": "aseg",
                 "d": "dgm",
                 "k": "dkt",
-                "w": "wmp",
                 "c": "ct",
+                "S": "syn",
+                "w": "wmp"
             }
             mds = list()
             for a in self.args:

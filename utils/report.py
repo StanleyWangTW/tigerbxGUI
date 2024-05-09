@@ -50,8 +50,13 @@ def ct_report(fname_ct, fname_dkt):
     return report
 
 
-def syn_report():
-    pass
+def syn_report(fname):
+    nii = nib.load(fname)
+    report = {'Structure Name': 'Volume(mm^3)'}
+    for number in label_all['synthseg']:
+        report[LABEL_DATA[number].name] = round(get_volume(nii, number))
+
+    return report
 
 
 def wmp_report(fname):
@@ -79,6 +84,10 @@ def create_report_dicts(fname, models):
         if 'ct' in models:
             f_ct = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_ct')
             report_dicts['ct'] = ct_report(f_ct, f_dkt)
+    
+    if 'syn' in models:
+        f_dkt = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_syn')
+        report_dicts['syn'] = syn_report(f_dkt)
 
     if 'wmp' in models:
         f = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_wmp')
