@@ -41,12 +41,12 @@ jobs:
     - name: Run Pyinstaller 1
       if: matrix.os == 'windows-latest'
       run: |
-        pyinstaller -p . -F --add-data ".\FreeSurferColorLUT.txt;.\" --add-data ".\icons\*;icons" ./${{ matrix.py }}.py
+        pyinstaller -p . -F --icon=./icons/icon.ico --add-data "./FreeSurferColorLUT.txt;./" --add-data "./icons/*;icons" ./${{ matrix.py }}.py
     - name: Run Pyinstaller 2
       if: matrix.os == 'ubuntu-20.04'
       run: |
-        pyinstaller -p . -F --add-data ".\FreeSurferColorLUT.txt:.\" --add-data ".\icons\*:icons" ./${{ matrix.py }}.py
+        pyinstaller -p . -F --icon=./icons/icon.ico --add-data ./FreeSurferColorLUT.txt:./ --add-data ./icons/*:icons ./${{ matrix.py }}.py
     - name: Run Pyinstaller 3
       if: matrix.os == 'macos-latest'
       run: |
-        pyinstaller -p . -F --add-data ".\FreeSurferColorLUT.txt:.\" --add-data ".\icons\*:icons" ./${{ matrix.py }}.py
+        pyinstaller -p . -F --icon=./icons/icon.ico --add-data ./FreeSurferColorLUT.txt:./ --add-data ./icons/*:icons ./${{ matrix.py }}.py
