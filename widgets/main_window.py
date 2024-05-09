@@ -225,8 +225,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.thread.start()
 
     def load_outputs_to_file_tree(self):
-        for f in os.listdir(self.output_dir):
-            self.fnames_dict[f.replace('_' + f.split('.')[0].split('_')[-1], '')].append(osp.join(self.output_dir, f))
+        for key in self.fnames_dict.keys():
+            outputs = glob(osp.join(self.output_dir, key.split('.')[0] + '*.nii*'))
+            for output in outputs:
+                self.fnames_dict[key].append(output)
 
         self.file_tree.clear()
         self.file_tree.addData(self.fnames_dict)
@@ -255,7 +257,8 @@ class RunTigerBx(QThread):
                 "a": "aseg",
                 "d": "dgm",
                 "k": "dkt",
-                "w": "wmp"
+                "w": "wmp",
+                "c": "ct",
             }
             mds = list()
             for a in self.args:
