@@ -20,7 +20,7 @@ def brain_mask_report():
 def aseg_report(fname):
     nii = nib.load(fname)
     aseg_labels = label_all['aseg']
-    report = dict()
+    report = {'Structure Name': 'Volume(mm^3)'}
     for number in aseg_labels:
         report[LABEL_DATA[number].name] = round(get_volume(nii, number))
 
@@ -29,7 +29,7 @@ def aseg_report(fname):
 
 def dgm_report(fname):
     nii = nib.load(fname)
-    report = dict()
+    report = {'Structure Name': 'Volume(mm^3)'}
     for name, number in DGM_LABEL.items():
         report[name] = round(get_volume(nii, number))
 
@@ -77,7 +77,7 @@ def create_report_csv(fname, models):
 
 
 if __name__ == '__main__':
-    create_report_csv(r'output\CC0001_philips_15_55_M.nii.gz', ['aseg', 'dgm'])
+    create_report_csv(r'test_file\CANDI_BPDwoPsy_030.nii.gz', ['aseg', 'dgm'])
     # print(aseg_report(r'test_file\CANDI_BPDwoPsy_030_aseg.nii.gz'))
     # def fname_to_arr(f):
     #     arr = reorder_img(nib.load(f), resample='nearest').get_fdata()
