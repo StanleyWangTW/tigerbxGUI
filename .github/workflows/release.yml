@@ -96,7 +96,7 @@ jobs:
 
     - name: Run Pyinstaller
       run: |
-        pyinstaller -p . -F --add-data ".\FreeSurferColorLUT.txt:.\" --add-data ".\icons\*:icons" ./${{ matrix.py }}.py
+        pyinstaller -p . -F --icon=./icons/icon.ico --add-data ./FreeSurferColorLUT.txt:./ --add-data ./icons/*:icons ./${{ matrix.py }}.py
 
     - name: Load release url file from release job
       uses: actions/download-artifact@v1
