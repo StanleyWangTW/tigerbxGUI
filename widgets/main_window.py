@@ -221,20 +221,22 @@ class MainWindow(QtWidgets.QMainWindow):
             self.thread = RunTigerBx(args, self.filenames, self.output_dir, models.output_csv.isChecked())
             self.thread.creating_csv.connect(dialog.creating_csv)
             self.thread.finished.connect(dialog.close)
+            self.thread.finished.connect(self.load_outputs_to_file_tree)
             self.thread.start()
 
-        # for f in os.listdir(self.output_dir):
-        #     self.fnames_dict[f.replace('_' + f.split('.')[0].split('_')[-1], '')].append(osp.join(self.output_dir, f))
+    def load_outputs_to_file_tree(self):
+        for f in os.listdir(self.output_dir):
+            self.fnames_dict[f.replace('_' + f.split('.')[0].split('_')[-1], '')].append(osp.join(self.output_dir, f))
 
-        # self.file_tree.clear()
-        # self.file_tree.addData(self.fnames_dict)
+        self.file_tree.clear()
+        self.file_tree.addData(self.fnames_dict)
 
     def exit(self):
         self.app.quit()
 
 
 class RunTigerBx(QThread):
-    finished = Signal()
+    # finished = Signal()
     creating_csv = Signal()
 
     def __init__(self, args, filenames, output_dir, output_csv) -> None:
@@ -251,7 +253,9 @@ class RunTigerBx(QThread):
             self.creating_csv.emit()
             model_names = {
                 "a": "aseg",
-                "d": "dgm"
+                "d": "dgm",
+                "k": "dkt",
+                "w": "wmp"
             }
             mds = list()
             for a in self.args:
@@ -261,5 +265,3 @@ class RunTigerBx(QThread):
 
             for f in self.filenames:
                 create_report_csv(os.path.join(self.output_dir, os.path.basename(f)), mds)
-
-        self.finished.emit()
