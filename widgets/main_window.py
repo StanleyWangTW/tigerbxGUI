@@ -1,23 +1,28 @@
-import threading
 import os
+import os.path as osp
+from glob import glob
 
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtCore import Qt
 from PySide6 import QtWidgets, QtGui
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtCore import Qt, QThread, Signal
+import numpy as np
 import tigerbx
 
 from .tool_bar import ToolBar
 from .models import Models
 from .canvas import Canvas
+from .file_list import FileTree
 from .run_dialog import RunningDialog
-from utils import image_process
+from .label_editor import LeftWidget, LabelList
+from utils import image_process, load_labels, create_report_csv
 
 
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, app):
         self.filenames = None
+        self.fnames_dict = dict()
         self.current_file = None
         self.overlays = None
         self.output_dir = 'output'
@@ -82,21 +87,29 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tool_bar.overlay_cmap_cbb.currentTextChanged.connect(self.change_overlay_cmap)
         self.tool_bar.run_button.clicked.connect(self.run)
 
-        # dock widgets
-        self.model_dock = QtWidgets.QDockWidget(self.tr(''), self)
-        self.model_dock.setWidget(Models())
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.model_dock)
+        # left dock widgets
+        self.page1 = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout()
+        self.models = Models()
+        layout.addWidget(self.models)
+        self.file_tree = FileTree()
+        self.file_tree.itemSelectionChanged.connect(self.file_selection_changed)
+        file_group = QtWidgets.QGroupBox()
+        file_group.setTitle('Files')
+        file_group_layout = QtWidgets.QVBoxLayout()
+        file_group_layout.addWidget(self.file_tree)
+        file_group.setLayout(file_group_layout)
+        layout.addWidget(file_group)
+        self.page1.setLayout(layout)
 
-        self.file_dock = QtWidgets.QDockWidget(self.tr('Input Files'))
-        self.file_list_widget = QtWidgets.QListWidget()
-        self.file_list_widget.itemSelectionChanged.connect(self.file_selection_changed)
-        self.file_dock.setWidget(self.file_list_widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.file_dock)
+        self.label_list = LabelList()
 
-        # self.output_dock = QtWidgets.QDockWidget(self.tr('Output Files'))
-        # self.output_list_widget = QtWidgets.QListWidget()
-        # self.output_dock.setWidget(self.output_list_widget)
-        # self.addDockWidget(Qt.LeftDockWidgetArea, self.output_dock)
+        w = LeftWidget()
+        w.addTab(self.page1, 'Files')
+        w.addTab(self.label_list, 'labels')
+        self.left_dock = QtWidgets.QDockWidget()
+        self.left_dock.setWidget(w)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.left_dock)
 
         #  central widget
         self.central_widget = Canvas(self.tool_bar)
@@ -106,22 +119,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'select file', r'.',
                                                                    'Nii Files (*.nii *.nii.gz)')
 
-        self.file_list_widget.clear()
         for filename in self.filenames:
-            item = QtWidgets.QListWidgetItem(filename)
-            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-            self.file_list_widget.addItem(item)
+            self.fnames_dict[osp.basename(filename)] = [filename]
+
+        self.file_tree.clear()
+        self.file_tree.addData(self.fnames_dict)
 
         self.change_current_file(self.filenames[0])
 
     def file_selection_changed(self):
-        items = self.file_list_widget.selectedItems()
+        items = self.file_tree.selectedItems()
 
         if not items:
             return
 
-        item = items[0]
-        self.change_current_file(str(item.text()))
+        self.change_current_file(items[0].text(0))
 
     def change_current_file(self, f):
         self.current_file = image_process.file_to_arr(f)
@@ -136,14 +148,24 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # overlay
     def add_overlay(self):
+        def read_labels(filename):
+            overlay = image_process.file_to_arr(filename).astype(np.int32)
+            unique_values = np.unique(overlay)
+            labels = load_labels()
+            for value in unique_values:
+                if value in labels.keys():
+                    self.label_list.addLabel(value, labels[value])
+
+
         if self.current_file is not None:
-            print('Add Overlay')
             self.overlays, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'select file', r'.', 'Nii Files (*.nii *.nii.gz)')
+            read_labels(self.overlays)
             self.central_widget.disp1.overlay = image_process.file_to_arr(self.overlays)
             self.central_widget.disp1.update_image()
 
     def clear_overlay(self):
         self.overlays = None
+        self.label_list.clear()
         self.central_widget.disp1.overlay = self.overlays
         self.central_widget.disp1.update_image()
 
@@ -177,7 +199,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def run(self):
         if self.filenames is not None:
-            models = self.model_dock.widget()
+            models = self.models
 
             args = ''
             args = args + 'm' if models.brain_mask.isChecked() else args
@@ -200,6 +222,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.thread.creating_csv.connect(dialog.creating_csv)
             self.thread.finished.connect(dialog.close)
             self.thread.start()
+
+        # for f in os.listdir(self.output_dir):
+        #     self.fnames_dict[f.replace('_' + f.split('.')[0].split('_')[-1], '')].append(osp.join(self.output_dir, f))
+
+        # self.file_tree.clear()
+        # self.file_tree.addData(self.fnames_dict)
 
     def exit(self):
         self.app.quit()
@@ -232,6 +260,6 @@ class RunTigerBx(QThread):
                     mds.append(model_name)
 
             for f in self.filenames:
-                image_process.niif2csv(os.path.join(self.output_dir, os.path.basename(f)), mds)
+                create_report_csv(os.path.join(self.output_dir, os.path.basename(f)), mds)
 
         self.finished.emit()
