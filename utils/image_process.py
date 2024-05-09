@@ -106,29 +106,3 @@ def file_to_arr(f):
     arr = reorder_img(nib.load(f), resample='nearest').get_fdata()
     # return arr.astype(np.uint8)
     return arr
-
-
-def niif2csv(fname, models):
-    for model in models:
-        labels = label_definition[model]
-
-        file_name = basename(fname).split('.')[0]
-        nii = nib.load(fname.replace(file_name, file_name + f'_{model}'))
-        db = dict()
-        for region, label in labels.items():
-            db[region] = round(get_volume(nii, label))
-
-        csv_f = file_name + f'_{model}.csv'
-        csv_f = fname.replace(basename(fname), csv_f)
-
-        with open(csv_f, 'a', newline='') as f:
-            w = csv.writer(f)
-            w.writerow(['Structure Name', 'Volume(mm^3)'])
-            w.writerows(db.items())
-
-
-def get_volume(nii, label):
-    zoom = nii.header.get_zooms()
-    vs = zoom[0] * zoom[1] * zoom[2]
-    data = nii.get_fdata()
-    return np.sum(data[data == label]) * vs

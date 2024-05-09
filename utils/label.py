@@ -1,5 +1,29 @@
 import numpy as np
 
+class Label():
+    def __init__(self, name, rgba):
+        self.name = name
+        self.rgba = np.array(rgba)
+
+
+def load_labels():
+    labels  = dict()
+    with open(LABEL_LUT, 'r') as f:
+        for line in f:
+            parts = line.strip().split()
+
+            if not parts or parts[0].startswith('#'):
+                continue
+
+            number = int(parts[0])
+            name = parts[1]
+            rgba = list(map(int, parts[2:]))
+
+            labels[number] = Label(name, rgba)
+
+    return labels
+
+
 LABEL_LUT = r'FreeSurferColorLUT.txt'
 
 DGM_LABEL = {
@@ -40,26 +64,4 @@ label_all['wmp'] = (  251,  252,  253,  254,  255, 3001, 3002, 3003, 3005, 3006,
 label_all['synthseg'] = ( 2,  3,  4,  5,  7,  8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 24,
                           26, 28, 41, 42, 43, 44, 46, 47, 49, 50, 51, 52, 53, 54, 58, 60)
 
-
-class Label():
-    def __init__(self, name, rgba):
-        self.name = name
-        self.rgba = np.array(rgba)
-
-
-def load_labels():
-    labels  = dict()
-    with open(LABEL_LUT, 'r') as f:
-        for line in f:
-            parts = line.strip().split()
-
-            if not parts or parts[0].startswith('#'):
-                continue
-
-            number = int(parts[0])
-            name = parts[1]
-            rgba = list(map(int, parts[2:]))
-
-            labels[number] = Label(name, rgba)
-
-    return labels
+LABEL_DATA = load_labels()

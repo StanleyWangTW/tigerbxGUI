@@ -15,7 +15,7 @@ from .canvas import Canvas
 from .file_list import FileTree
 from .run_dialog import RunningDialog
 from .label_editor import LeftWidget, LabelList
-from utils import image_process, load_labels
+from utils import image_process, load_labels, create_report_csv
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -223,11 +223,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.thread.finished.connect(dialog.close)
             self.thread.start()
 
-        for f in os.listdir(self.output_dir):
-            self.fnames_dict[f.replace('_' + f.split('.')[0].split('_')[-1], '')].append(osp.join(self.output_dir, f))
+        # for f in os.listdir(self.output_dir):
+        #     self.fnames_dict[f.replace('_' + f.split('.')[0].split('_')[-1], '')].append(osp.join(self.output_dir, f))
 
-        self.file_tree.clear()
-        self.file_tree.addData(self.fnames_dict)
+        # self.file_tree.clear()
+        # self.file_tree.addData(self.fnames_dict)
 
     def exit(self):
         self.app.quit()
@@ -260,6 +260,6 @@ class RunTigerBx(QThread):
                     mds.append(model_name)
 
             for f in self.filenames:
-                image_process.niif2csv(os.path.join(self.output_dir, os.path.basename(f)), mds)
+                create_report_csv(os.path.join(self.output_dir, os.path.basename(f)), mds)
 
         self.finished.emit()
