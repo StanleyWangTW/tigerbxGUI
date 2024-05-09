@@ -13,15 +13,10 @@ def get_volume(nii, label):
     return np.sum(data == label) * voxel_size
 
 
-def brain_mask_report():
-    pass
-
-
 def aseg_report(fname):
     nii = nib.load(fname)
-    aseg_labels = label_all['aseg']
     report = {'Structure Name': 'Volume(mm^3)'}
-    for number in aseg_labels:
+    for number in label_all['aseg']:
         report[LABEL_DATA[number].name] = round(get_volume(nii, number))
 
     return report
@@ -36,15 +31,36 @@ def dgm_report(fname):
     return report
 
 
-def dkt_report():
-    pass
+def dkt_report(fname):
+    nii = nib.load(fname)
+    report = {'Structure Name': 'Volume(mm^3)'}
+    for number in label_all['dkt']:
+        report[LABEL_DATA[number].name] = round(get_volume(nii, number))
 
-def ct_report():
-    pass
+    return report
+
+def ct_report(fname_ct, fname_dkt):
+    ct = nib.load(fname_ct).get_fdata()
+    dkt = nib.load(fname_dkt).get_fdata()
+    report = {'Structure Name': 'Average Cortical Thickness(mm)'}
+    for number in label_all['dkt']:
+        average_ct = round(np.sum(ct[dkt == number])  / np.sum(dkt == number), 3)
+        report[LABEL_DATA[number].name] = average_ct
+
+    return report
+
 
 def syn_report():
     pass
 
+
+def wmp_report(fname):
+    nii = nib.load(fname)
+    report = {'Structure Name': 'Volume(mm^3)'}
+    for number in label_all['wmp']:
+        report[LABEL_DATA[number].name] = round(get_volume(nii, number))
+
+    return report
 
 def create_report_dicts(fname, models):
     report_dicts = dict()
@@ -57,11 +73,16 @@ def create_report_dicts(fname, models):
         report_dicts['dgm'] = dgm_report(f)
 
     if 'dkt' in models:
-        f = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_dkt')
-        report_dicts['dkt'] = dkt_report(f)
+        f_dkt = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_dkt')
+        report_dicts['dkt'] = dkt_report(f_dkt)
 
         if 'ct' in models:
-            report_dicts['ct'] = ct_report(f)
+            f_ct = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_ct')
+            report_dicts['ct'] = ct_report(f_ct, f_dkt)
+
+    if 'wmp' in models:
+        f = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_wmp')
+        report_dicts['wmp'] = wmp_report(f)
 
     return report_dicts
 
@@ -77,20 +98,4 @@ def create_report_csv(fname, models):
 
 
 if __name__ == '__main__':
-    create_report_csv(r'test_file\CANDI_BPDwoPsy_030.nii.gz', ['aseg', 'dgm'])
-    # print(aseg_report(r'test_file\CANDI_BPDwoPsy_030_aseg.nii.gz'))
-    # def fname_to_arr(f):
-    #     arr = reorder_img(nib.load(f), resample='nearest').get_fdata()
-    #     # return arr.astype(np.uint8)
-    #     return arr
-    
-    # dkt = nib.load('output\CANDI_BPDwoPsy_030_dkt.nii.gz').get_fdata()
-    # ct = nib.load('output\CANDI_BPDwoPsy_030_ct.nii.gz').get_fdata()
-
-    # # print(np.unique(dkt))
-    # print(np.unique(ct))
-
-    # for label in np.unique(dkt):
-    #     if label in DKT_LABEL:
-    #         average_thickness = np.sum(ct[dkt == label])  / np.sum(dkt == label)
-    #         print(label, average_thickness)
+    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['aseg', 'dgm', 'wmp'])
