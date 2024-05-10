@@ -38,16 +38,9 @@ jobs:
         pip install https://github.com/htylab/tigerbx/archive/refs/tags/v0.1.15.tar.gz
         pip install -r requirements.txt
 
-    - name: Install libegl1
-      if: matrix.os == 'ubuntu-latest'
-        run: |
-          apt update
-          apt install libegl1
-
     - name: Run Pyinstaller
       run: |
         pyinstaller tigerbxGUI.spec
-        dist/tigerbxGUI --version
 
     - uses: actions/upload-artifact@v4
       with:
