@@ -27,7 +27,7 @@ def load_labels():
 
 
 here = osp.dirname(osp.abspath(__file__))
-LABEL_LUT = osp.join(here, r'../FreeSurferColorLUT.txt')
+LABEL_LUT = osp.abspath(osp.join(here, r'../FreeSurferColorLUT.txt'))
 
 DGM_LABEL = {
     "Left-Thalamus-Proper": 1,
