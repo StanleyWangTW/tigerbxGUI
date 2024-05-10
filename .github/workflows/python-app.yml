@@ -36,7 +36,7 @@ jobs:
         pip install onnxruntime
         # pip install onnxruntime-gpu
         pip install https://github.com/htylab/tigerbx/archive/refs/tags/v0.1.15.tar.gz
-        pip install -r requirements.txt
+        pip3 install -r requirements.txt
 
     - name: Install libegl1
       if: matrix.os == 'ubuntu-latest'
