@@ -40,9 +40,9 @@ jobs:
 
     - name: Install libegl1
       if: matrix.os == 'ubuntu-latest'
-        run: |
-          apt update
-          apt install libegl1
+      run: |
+        apt update
+        apt install libegl1
 
     - name: Run Pyinstaller
       run: |
