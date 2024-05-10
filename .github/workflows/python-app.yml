@@ -36,7 +36,7 @@ jobs:
         pip install pyinstaller
         pip install onnxruntime
         # pip install onnxruntime-gpu
-        pip install https://github.com/htylab/tigerbx/archive/main.zip
+        pip install https://github.com/htylab/tigerbx/archive/refs/tags/v0.1.15.tar.gz
         pip install -r requirements.txt
     - name: Run Pyinstaller 1
       if: matrix.os == 'windows-latest'
