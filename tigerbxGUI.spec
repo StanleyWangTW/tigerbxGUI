@@ -3,7 +3,7 @@
 from PyInstaller.utils.hooks import collect_dynamic_libs
 
 datas = [
-    ('./FreeSurferColorLUT.txt', './'),
+    ('FreeSurferColorLUT.txt', '.'),
     ('./icons/*', 'icons')
 ]
 datas = datas + collect_dynamic_libs('onnxruntime', destdir='onnxruntime/capi')
