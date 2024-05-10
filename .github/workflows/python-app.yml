@@ -20,9 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['windows-latest', 'ubuntu-20.04', 'macos-latest']
-        #os: ['windows-latest']
-        py: ['main']
+        os: ['windows-latest', 'ubuntu-latest', 'macos-latest']
 
     steps:
     - uses: actions/checkout@v4
@@ -30,6 +28,7 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: "3.10"
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -38,20 +37,13 @@ jobs:
         # pip install onnxruntime-gpu
         pip install https://github.com/htylab/tigerbx/archive/refs/tags/v0.1.15.tar.gz
         pip install -r requirements.txt
-    - name: Run Pyinstaller 1
-      if: matrix.os == 'windows-latest'
+
+    - name: Run Pyinstaller
       run: |
-        pyinstaller -p . -F --icon=./icons/icon.ico --add-data "./FreeSurferColorLUT.txt;./" --add-data "./icons/*;icons" ./${{ matrix.py }}.py
-    - name: Run Pyinstaller 2
-      if: matrix.os == 'ubuntu-20.04'
-      run: |
-        pyinstaller -p . -F --icon=./icons/icon.ico --add-data ./FreeSurferColorLUT.txt:./ --add-data ./icons/*:icons ./${{ matrix.py }}.py
-    - name: Run Pyinstaller 3
-      if: matrix.os == 'macos-latest'
-      run: |
-        pyinstaller -p . -F --icon=./icons/icon.ico --add-data ./FreeSurferColorLUT.txt:./ --add-data ./icons/*:icons ./${{ matrix.py }}.py
+        pyinstaller tigerbxGUI.spec
+        dist/tigerbxGUI --version
 
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.py }}-${{ matrix.os }}
+        name: TigerBX-gui-${{ matrix.os }}
         path: dist/*

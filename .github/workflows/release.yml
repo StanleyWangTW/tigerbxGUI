@@ -96,7 +96,7 @@ jobs:
 
     - name: Run Pyinstaller
       run: |
-        pyinstaller -p . -F --icon=./icons/icon.ico --add-data ./FreeSurferColorLUT.txt:./ --add-data ./icons/*:icons ./${{ matrix.py }}.py
+        pyinstaller tigerbxGUI.spec
 
     - name: Load release url file from release job
       uses: actions/download-artifact@v1
@@ -116,8 +116,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-        asset_path: ./dist/main.exe
-        asset_name: tigerBX-GUI.exe
+        asset_path: ./dist/tigerbxGUI.exe
+        asset_name: TigerBX-gui.exe
         asset_content_type: application/octet-stream
 
     - name: Upload release executable on macOS & Linux
@@ -128,6 +128,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-        asset_path: ./dist/main
-        asset_name: tigerBX-GUI-${{ runner.os }}
+        asset_path: ./dist/tigerbxGUI
+        asset_name: TigerBX-gui-${{ runner.os }}
         asset_content_type: application/octet-stream
