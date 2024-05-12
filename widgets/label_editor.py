@@ -2,7 +2,7 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import QImage, QPixmap, Qt, QIntValidator
 import numpy as np
 
-from utils.label import LABEL_DATA
+import utils.label as utils_label
 
 
 class LeftWidget(QTabWidget):
@@ -13,6 +13,7 @@ class LeftWidget(QTabWidget):
 class LabelEditor(QWidget):
     def __init__(self):
         super(LabelEditor, self).__init__()
+        self.current_labels = dict()
         self.initUI()
         self.connect_signals()
 
@@ -37,13 +38,19 @@ class LabelEditor(QWidget):
         label_picker = LabelCreater()
         number, name, rgba = label_picker.create_label()
         if number is not None:
+            if number in self.current_labels:
+                self.current_labels[number] = utils_label.Label(name, rgba)
+                show_error_message(f'Label value={number} alreay exits.\nPlease enter a different value.')
+                return
+
             self.label_list.addLabel(number, name, rgba)
 
     def load_labels(self, arr):
         self.label_list.clear()
         unique_values_int = np.unique(arr).astype(np.int32)
         for value in unique_values_int:
-            label = LABEL_DATA[value]
+            label = utils_label.LABEL_DATA[value]
+            self.current_labels[value] = label
             self.label_list.addLabelObj(value, label)
 
 
@@ -130,7 +137,7 @@ class LabelCreater(QDialog):
             try:
                 number = int(self.number.text())
             except ValueError:
-                self.show_error_message('Label value should be an integer.')
+                show_error_message('Label value should be an integer.')
                 return None, None, None
 
             self.color[-1] = int(self.opacity_ledt.text())
@@ -160,10 +167,6 @@ class LabelCreater(QDialog):
                                           square.shape[1] * 3,
                                           QImage.Format_RGB888))
         self.color_btn.setIcon(pixmap)
-
-    def show_error_message(self, message):
-        msg_box = QMessageBox(QMessageBox.Critical, 'Input Error', message)
-        msg_box.exec()
 
 
 class Label(QWidget):
@@ -207,6 +210,10 @@ class QVLine(QFrame):
         super(QVLine, self).__init__()
         self.setFrameShape(QFrame.VLine)
         self.setFrameShadow(QFrame.Sunken)
+
+def show_error_message(message):
+    msg_box = QMessageBox(QMessageBox.Critical, 'Input Error', message)
+    msg_box.exec()
 
 
 if __name__ == '__main__':
