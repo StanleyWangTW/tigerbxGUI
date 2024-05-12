@@ -2,65 +2,54 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import QImage, QPixmap, Qt, QIntValidator
 import numpy as np
 
-class QVLine(QFrame):
+from utils.label import LABEL_DATA
+
+
+class LeftWidget(QTabWidget):
     def __init__(self):
-        super(QVLine, self).__init__()
-        self.setFrameShape(QFrame.VLine)
-        self.setFrameShadow(QFrame.Sunken)
+        super(LeftWidget, self).__init__()
+        self.setTabShape(self.TabShape.Rounded)
 
+class LabelEditor(QWidget):
+    def __init__(self):
+        super(LabelEditor, self).__init__()
+        self.initUI()
+        self.connect_signals()
 
-class Label(QWidget):
-    def __init__(self, number, name, rgba) -> None:
-        super().__init__()
-        self.number = QLabel(str(number))
-        self.name = QLabel(name)
-        self.rgba = rgba
-        self.color_square = QLabel()
-        self.init_ui()
+    def initUI(self):
+        vbox = QVBoxLayout()
+        self.label_list = LabelList()
+        vbox.addWidget(self.label_list)
 
-    def init_ui(self):
-        def rgb_square(width, height, rgb):
-            square = np.zeros((width, height, 3))
-            for c in range(3):
-                square[..., c] = rgb[c]
+        hbox = QHBoxLayout()
+        self.new_btn = QPushButton('new')
+        hbox.addWidget(self.new_btn)
+        self.delete_btn = QPushButton('delete')
+        hbox.addWidget(self.delete_btn)
+        vbox.addLayout(hbox)
 
-            return square
+        self.setLayout(vbox)
 
-        self.number.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+    def connect_signals(self):
+        self.new_btn.clicked.connect(self.create_label)
 
-        square = rgb_square(10, 10, self.rgba[:-1])
-        pixmap = QPixmap.fromImage(QImage(square.astype(np.uint8),
-                                          square.shape[0],
-                                          square.shape[1],
-                                          square.shape[1] * 3,
-                                          QImage.Format_RGB888))
-        self.color_square.setPixmap(pixmap)
-        self.color_square.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+    def create_label(self):
+        label_picker = LabelCreater()
+        number, name, rgba = label_picker.create_label()
+        if number is not None:
+            self.label_list.addLabel(number, name, rgba)
 
-        layout = QHBoxLayout()
-        layout.addWidget(self.number)
-        layout.addWidget(self.color_square)
-        layout.addWidget(QVLine())
-        layout.addWidget(self.name)
-        self.setLayout(layout)
+    def load_labels(self, arr):
+        self.label_list.clear()
+        unique_values_int = np.unique(arr).astype(np.int32)
+        for value in unique_values_int:
+            label = LABEL_DATA[value]
+            self.label_list.addLabelObj(value, label)
 
 
 class  LabelList(QListWidget):
     def __init__(self):
         super(LabelList, self).__init__()
-
-        available_labels = QGroupBox('Available Labels')
-
-        vbox = QVBoxLayout()
-        hbox = QHBoxLayout()
-        new_btn = QPushButton('new')
-        hbox.addWidget(new_btn)
-        hbox.addWidget(QPushButton('delete'))
-        vbox.addLayout(hbox)
-        self.setLayout(vbox)
-
-        new_btn.clicked.connect(self.create_label)
-
 
     def addLabel(self, number, name, rgba):
         row = Label(number, name, rgba)
@@ -69,24 +58,12 @@ class  LabelList(QListWidget):
         self.addItem(item)
         self.setItemWidget(item, row)
 
-    # def addLabel(self, number, label):
-    #     row = Label(number, label.name, label.rgba)
-    #     item = QListWidgetItem(self)
-    #     item.setSizeHint(row.minimumSizeHint())
-    #     self.addItem(item)
-    #     self.setItemWidget(item, row)
-
-    def create_label(self):
-        label_picker = LabelCreater()
-        number, name, rgba = label_picker.create_label()
-        if number is not None:
-            self.addLabel(number, name, rgba)
-
-
-class LeftWidget(QTabWidget):
-    def __init__(self):
-        super(LeftWidget, self).__init__()
-        self.setTabShape(self.TabShape.Rounded)
+    def addLabelObj(self, number, label):
+        row = Label(number, label.name, label.rgba)
+        item = QListWidgetItem(self)
+        item.setSizeHint(row.minimumSizeHint())
+        self.addItem(item)
+        self.setItemWidget(item, row)
 
 
 class LabelCreater(QDialog):
@@ -158,7 +135,6 @@ class LabelCreater(QDialog):
 
             self.color[-1] = int(self.opacity_ledt.text())
             name = self.name.text()
-            print(self.color)
             return number, name, self.color
         else:
             return None, None, None
@@ -188,6 +164,49 @@ class LabelCreater(QDialog):
     def show_error_message(self, message):
         msg_box = QMessageBox(QMessageBox.Critical, 'Input Error', message)
         msg_box.exec()
+
+
+class Label(QWidget):
+    def __init__(self, number, name, rgba) -> None:
+        super().__init__()
+        self.number = QLabel(str(number))
+        self.name = QLabel(name)
+        self.rgba = rgba
+        self.color_square = QLabel()
+        self.init_ui()
+
+    def init_ui(self):
+        def rgb_square(width, height, rgb):
+            square = np.zeros((width, height, 3))
+            for c in range(3):
+                square[..., c] = rgb[c]
+
+            return square
+
+        self.number.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+        square = rgb_square(10, 10, self.rgba[:-1])
+        pixmap = QPixmap.fromImage(QImage(square.astype(np.uint8),
+                                          square.shape[0],
+                                          square.shape[1],
+                                          square.shape[1] * 3,
+                                          QImage.Format_RGB888))
+        self.color_square.setPixmap(pixmap)
+        self.color_square.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+        layout = QHBoxLayout()
+        layout.addWidget(self.number)
+        layout.addWidget(self.color_square)
+        layout.addWidget(QVLine())
+        layout.addWidget(self.name)
+        self.setLayout(layout)
+
+
+class QVLine(QFrame):
+    def __init__(self):
+        super(QVLine, self).__init__()
+        self.setFrameShape(QFrame.VLine)
+        self.setFrameShadow(QFrame.Sunken)
 
 
 if __name__ == '__main__':

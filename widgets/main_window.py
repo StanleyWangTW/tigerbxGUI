@@ -14,7 +14,7 @@ from .models import Models
 from .canvas import Canvas
 from .file_list import FileTree
 from .run_dialog import RunningDialog
-from .label_editor import LeftWidget, LabelList
+from .label_editor import LeftWidget, LabelEditor
 from utils import image_process, load_labels, create_report_csv
 
 
@@ -102,11 +102,11 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(file_group)
         self.page1.setLayout(layout)
 
-        self.label_list = LabelList()
+        self.label_editor = LabelEditor()
 
         w = LeftWidget()
         w.addTab(self.page1, 'Files')
-        w.addTab(self.label_list, 'labels')
+        w.addTab(self.label_editor, 'labels')
         self.left_dock = QtWidgets.QDockWidget()
         self.left_dock.setWidget(w)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.left_dock)
@@ -137,6 +137,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def change_current_file(self, f):
         self.current_file = image_process.file_to_arr(f)
+        self.label_editor.load_labels(self.current_file)
         self.central_widget.disp1.set_image(self.current_file)
         self.statusBar().showMessage(f'Opened: {f}')
 
