@@ -29,6 +29,7 @@ class iFrame(QtWidgets.QWidget):
         self.maxv = 0
         self.layers = [0, 0, 0]
         self.tool_bar = tool_bar
+        self.mode = 'crosshair'
 
         self.viewers = [SliceViewer(self, slice_type='coronal'), SliceViewer(self, slice_type='sagittal'), SliceViewer(self, slice_type='axial')]
         layout = QGridLayout()
@@ -121,6 +122,14 @@ class iFrame(QtWidgets.QWidget):
                 img_data = self.show_cross(img_data, direction)
 
                 self.viewers[i].set_image(img_data)
+
+    def crosshair_mode(self):
+        self.mode = 'crosshair'
+        print(self.mode)
+
+    def zoom_mode(self):
+        self.mode = 'zoom'
+        print(self.mode)
     
     # def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
     #     if self.draw:
@@ -154,23 +163,23 @@ class iFrame(QtWidgets.QWidget):
         if self.disply_mode == 3:
             self.hide_viewers((0, 2))
             self.disply_mode = 0
-            self.viewers[0].full_screen_btn.setIcon(newIcon('menu'))
+            self.viewers[1].full_screen_btn.setIcon(newIcon('menu'))
             
         elif self.disply_mode == 0:
             self.show_3_viewers()
             self.disply_mode = 3
-            self.viewers[0].full_screen_btn.setIcon(newIcon('letter-s'))
+            self.viewers[1].full_screen_btn.setIcon(newIcon('letter-s'))
     
     def axial_full_screen(self):
         if self.disply_mode == 3:
             self.hide_viewers((0, 1))
             self.disply_mode = 0
-            self.viewers[0].full_screen_btn.setIcon(newIcon('menu'))
+            self.viewers[2].full_screen_btn.setIcon(newIcon('menu'))
             
         elif self.disply_mode == 0:
             self.show_3_viewers()
             self.disply_mode = 3
-            self.viewers[0].full_screen_btn.setIcon(newIcon('letter-a'))
+            self.viewers[2].full_screen_btn.setIcon(newIcon('letter-a'))
 
     def hide_viewers(self, slice_index):
         for i in slice_index:
@@ -229,6 +238,30 @@ class NewCanvas(QGraphicsView):
         self.scene = QGraphicsScene()
         self.scene.setSceneRect(0, 0, 400, 400)
         self.slice_type = slice_type
+        self.mouse_start_pos = None
+        self.zoom_factor = 1
+        self.pan_pos = QPointF(0, 0)
+        self.drag_flag = False
+        # self.line_x = 200
+        # self.line_y = 200
+
+        self.image_data = image_data
+        height, width, _  = self.image_data.shape
+        self.scale_factor = 1
+
+        self.pixmap = MyPixmapItem()
+        self.pixmap.setPixmap(QPixmap.fromImage(QImage(np.ascontiguousarray(self.image_data), width, height, QImage.Format_Grayscale8)))
+        self.pixmap.setPos(0, 0)
+        self.scene.addItem(self.pixmap)
+
+        # self.line = QGraphicsLineItem(0, 0, 400, 0)
+        # self.line2 = QGraphicsLineItem(0, 0, 400, 0)
+        # pen = QPen(Qt.blue)
+        # pen.setStyle(Qt.DashLine)
+        # self.line.setPen(pen)
+        # self.line2.setPen(pen)
+        # self.scene.addItem(self.line)
+        # self.scene.addItem(self.line2)
 
         texts = []
         if self.slice_type == 'coronal':
@@ -244,15 +277,6 @@ class NewCanvas(QGraphicsView):
             self.scene.addItem(self.texts[-1])
 
         self.initUI()
-
-        self.image_data = image_data
-        height, width, _  = self.image_data.shape
-        self.scale_factor = 1
-
-        self.pixmap = MyPixmapItem()
-        self.pixmap.setPixmap(QPixmap.fromImage(QImage(np.ascontiguousarray(self.image_data), width, height, QImage.Format_Grayscale8)))
-        self.pixmap.setPos(0, 0)
-        self.scene.addItem(self.pixmap)
 
         self.view_size = self.size()
         self.setScene(self.scene)
@@ -276,8 +300,11 @@ class NewCanvas(QGraphicsView):
         )
 
     def resizeEvent(self, event):
+        self.resize()
+
+    def resize(self):
         # resize scene
-        self.scene.setSceneRect(QRectF(QPointF(0, 0), event.size()))
+        self.scene.setSceneRect(QRectF(QPointF(0, 0), self.size()))
 
         # calculate scale factor
         h, w, _ = self.image_data.shape
@@ -287,10 +314,11 @@ class NewCanvas(QGraphicsView):
         scale_x = (self.view_size.width() - 2*self.texts[0].boundingRect().width()) / w
         scale_y = (self.view_size.height() - 2*self.texts[0].boundingRect().height()) / h
         self.scale_factor = min(scale_x, scale_y)
+        factor = self.scale_factor * self.zoom_factor
 
         # scale pixmap
-        self.pixmap.setScale(self.scale_factor)
-        self.pixmap.setPos(QPointF((ww - w * self.scale_factor) // 2, (hh - h * self.scale_factor) // 2))
+        self.pixmap.setScale(factor)
+        self.pixmap.setPos(QPointF((ww - w * factor) // 2 + self.pan_pos.x(), (hh - h * factor) // 2 + self.pan_pos.y()))
 
         # set view minimum size by pixmap size
         self.setMinimumSize(w + 2*self.texts[0].boundingRect().width(), h + 2*self.texts[0].boundingRect().height())
@@ -307,26 +335,51 @@ class NewCanvas(QGraphicsView):
 
     def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
         iframe = self.parent().parent()
-        if iframe.image is not None and event.buttons() & Qt.LeftButton:
-            x, y = event.pos().x(), event.pos().y()
+        mode = iframe.mode
+        if iframe.image is not None:
+            if self.drag_flag:
+                if mode == 'crosshair':
+                    x, y = event.pos().x(), event.pos().y()
 
-            pixmap_x = self.pixmap.pos().x()
-            pixmap_y = self.pixmap.pos().y()
-            
-            x = int((x - pixmap_x) / self.scale_factor)
-            y = int((y - pixmap_y) / self.scale_factor)
+                    pixmap_x = self.pixmap.pos().x()
+                    pixmap_y = self.pixmap.pos().y()
 
-            if self.slice_type == 'coronal': # mouse in coronal plane
-                iframe.set_layer(x, 0)
-                iframe.set_layer(iframe.S-y-1, 2)
+                    x = int((x - pixmap_x) / (self.scale_factor * self.zoom_factor))
+                    y = int((y - pixmap_y) / (self.scale_factor * self.zoom_factor))
 
-            elif self.slice_type == 'sagittal': # mouse in sagittal plane
-                iframe.set_layer(x, 1)
-                iframe.set_layer(iframe.S-y-1, 2)
+                    factor = (self.scale_factor * self.zoom_factor)
+                    # self.line_x = pixmap_x + x*factor + factor / 2
+                    # self.line_y = pixmap_y + y*factor + factor / 2
+                    # self.line.setLine(0, self.line_y, self.view_size.width(), self.line_y)
+                    # self.line2.setLine(self.line_x, 0, self.line_x, self.view_size.height())
 
-            elif self.slice_type == 'axial': # mouse in axial plane
-                iframe.set_layer(x, 0)
-                iframe.set_layer(iframe.A-y-1, 1)
+                    if self.slice_type == 'coronal': # mouse in coronal plane
+                        iframe.set_layer(x, 0)
+                        iframe.set_layer(iframe.S-y-1, 2)
+
+                    elif self.slice_type == 'sagittal': # mouse in sagittal plane
+                        iframe.set_layer(x, 1)
+                        iframe.set_layer(iframe.S-y-1, 2)
+
+                    elif self.slice_type == 'axial': # mouse in axial plane
+                        iframe.set_layer(x, 0)
+                        iframe.set_layer(iframe.A-y-1, 1)
+                
+                elif mode == 'zoom':
+                    self.zoom(event)
+
+    def mousePressEvent(self, event):
+            mode = self.parent().parent().mode
+            self.drag_flag = True
+            if mode == 'zoom':
+                if event.buttons() & Qt.LeftButton:
+                    self.mouse_start_pos = event.pos()
+                elif event.buttons() & Qt.RightButton:
+                    self.mouse_start_pos = event.pos()
+
+    def mouseReleaseEvent(self, event):
+        self.drag_flag = False
+        self.mouse_start_pos = None
 
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
         ifame = self.parent().parent()
@@ -341,6 +394,21 @@ class NewCanvas(QGraphicsView):
         elif self.slice_type == 'axial': # mouse in axial plane
             angle = 1 if event.angleDelta().y() > 0 else -1
             ifame.set_layer(angle + ifame.layers[2], 2)
+
+    def zoom(self, event):
+        dx = event.pos().x() - self.mouse_start_pos.x()
+        dy = event.pos().y() - self.mouse_start_pos.y()
+
+        if event.buttons() & Qt.LeftButton:
+            self.pan_pos = QPointF(self.pan_pos.x() + dx, self.pan_pos.y() + dy)
+
+        elif event.buttons() & Qt.RightButton:
+            self.zoom_factor -= dy / 100
+            if self.zoom_factor * self.scale_factor < 1:
+                self.zoom_factor = 1 / self.scale_factor
+
+        self.resize()
+        self.mouse_start_pos = event.pos()
 
 
 class MyText(QGraphicsTextItem):

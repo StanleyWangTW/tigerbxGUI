@@ -3,3 +3,4 @@ s <a href="https://www.flaticon.com/free-icons/character-design" title="characte
 c <a href="https://www.flaticon.com/free-icons/letter-c" title="letter c icons">Letter c icons created by moniruldislam - Flaticon</a>
 menu <a href="https://www.flaticon.com/free-icons/menu" title="menu icons">Menu icons created by Freepik - Flaticon</a>
 zoom <a href="https://www.flaticon.com/free-icons/magnifying-glass" title="magnifying glass icons">Magnifying glass icons created by Freepik - Flaticon</a>
+crosshair <a href="https://www.flaticon.com/free-icons/crosshair" title="crosshair icons">Crosshair icons created by Freepik - Flaticon</a>

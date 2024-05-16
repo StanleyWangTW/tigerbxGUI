@@ -20,9 +20,12 @@ class LabelEditor(QWidget):
 
     def initUI(self):
         tools = QGroupBox('Tools', self)
+        self.crosshair_btn = QPushButton(icon=newIcon('crosshair'))
+        self.crosshair_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.zoom_btn = QPushButton(icon=newIcon('zoom'))
         self.zoom_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         tools_layout = QHBoxLayout()
+        tools_layout.addWidget(self.crosshair_btn)
         tools_layout.addWidget(self.zoom_btn)
         tools.setLayout(tools_layout)
 

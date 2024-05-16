@@ -30,6 +30,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.app = app
         self.setup_ui()
+        self.connect()
 
     def setup_ui(self):
         self.setWindowTitle('TigerBx')
@@ -114,6 +115,10 @@ class MainWindow(QtWidgets.QMainWindow):
         #  central widget
         self.central_widget = Canvas(self.tool_bar)
         self.setCentralWidget(self.central_widget)
+
+    def connect(self):
+        self.label_editor.zoom_btn.clicked.connect(self.central_widget.disp1.zoom_mode)
+        self.label_editor.crosshair_btn.clicked.connect(self.central_widget.disp1.crosshair_mode)
 
     def open_files(self):
         self.filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'select file', r'.',
