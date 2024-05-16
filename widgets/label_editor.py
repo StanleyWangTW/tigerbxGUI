@@ -3,6 +3,7 @@ from PySide6.QtGui import QImage, QPixmap, Qt, QIntValidator
 import numpy as np
 
 import utils.label as utils_label
+from utils.qt import newIcon
 
 
 class LeftWidget(QTabWidget):
@@ -18,17 +19,25 @@ class LabelEditor(QWidget):
         self.connect_signals()
 
     def initUI(self):
-        vbox = QVBoxLayout()
+        tools = QGroupBox('Tools', self)
+        self.zoom_btn = QPushButton(icon=newIcon('zoom'))
+        self.zoom_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        tools_layout = QHBoxLayout()
+        tools_layout.addWidget(self.zoom_btn)
+        tools.setLayout(tools_layout)
+
         self.label_list = LabelList()
-        vbox.addWidget(self.label_list)
-
-        hbox = QHBoxLayout()
+        
         self.new_btn = QPushButton('new')
-        hbox.addWidget(self.new_btn)
         self.delete_btn = QPushButton('delete')
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.new_btn)
         hbox.addWidget(self.delete_btn)
-        vbox.addLayout(hbox)
 
+        vbox = QVBoxLayout()
+        vbox.addWidget(tools)
+        vbox.addWidget(self.label_list)
+        vbox.addLayout(hbox)
         self.setLayout(vbox)
 
     def connect_signals(self):
@@ -49,9 +58,10 @@ class LabelEditor(QWidget):
         self.label_list.clear()
         unique_values_int = np.unique(arr).astype(np.int32)
         for value in unique_values_int:
-            label = utils_label.LABEL_DATA[value]
-            self.current_labels[value] = label
-            self.label_list.addLabelObj(value, label)
+            if value in utils_label.LABEL_DATA.keys():
+                label = utils_label.LABEL_DATA[value]
+                self.current_labels[value] = label
+                self.label_list.addLabelObj(value, label)
 
 
 class  LabelList(QListWidget):

@@ -1,18 +1,21 @@
 import numpy as np
 from PySide6 import QtWidgets, QtGui, QtCore
-from PySide6.QtGui import QPixmap, Qt
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 import mahotas
 
 from utils.display import color_show
+from utils.qt import newIcon
 
 
-class iFrame(QtWidgets.QLabel):
+class iFrame(QtWidgets.QWidget):
 
     def __init__(self, tool_bar):
         super().__init__()
-        self.setStyleSheet("background-color: black;")
-        self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
+        # self.setStyleSheet("background-color: black;")
+        # self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        # self.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
 
         self.image = None
         self.scr = None
@@ -26,6 +29,17 @@ class iFrame(QtWidgets.QLabel):
         self.maxv = 0
         self.layers = [0, 0, 0]
         self.tool_bar = tool_bar
+
+        self.viewers = [SliceViewer(self, slice_type='coronal'), SliceViewer(self, slice_type='sagittal'), SliceViewer(self, slice_type='axial')]
+        layout = QGridLayout()
+        layout.addWidget(self.viewers[0], 0, 0)
+        layout.addWidget(self.viewers[1], 0, 1)
+        layout.addWidget(self.viewers[2], 1, 0)
+        self.setLayout(layout)
+        self.disply_mode = 3
+        self.viewers[0].full_screen_btn.clicked.connect(self.coronal_full_screen)
+        self.viewers[1].full_screen_btn.clicked.connect(self.sagittal_full_screen)
+        self.viewers[2].full_screen_btn.clicked.connect(self.axial_full_screen)
         
     def set_layer(self, layer, i):
         layer = int(layer)
@@ -106,100 +120,71 @@ class iFrame(QtWidgets.QLabel):
 
                 img_data = self.show_cross(img_data, direction)
 
-                if i==0:
-                    self.scr[0:self.S, 0:self.R, :] = img_data
-                if i==1:
-                    self.scr[0:self.S, self.R+1:self.R+1+self.A, :] = img_data
-                if i==2:
-                    self.scr[self.S+1:self.S+1+self.A, 0:self.R, :] = img_data
-
-            self.paint()
-
-    def paint(self):
-        if self.scr is not None:
-            pixmap = QPixmap.fromImage(
-                QtGui.QImage(
-                    self.scr.astype(np.uint8),
-                    self.scr.shape[1],
-                    self.scr.shape[0],
-                    self.scr.shape[1] * 3,
-                    QtGui.QImage.Format_RGB888
-                )
-            )
-            pixmap = pixmap.scaled(self.size(), Qt.AspectRatioMode.KeepAspectRatio)
-            self.setPixmap(pixmap)
-
-    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
-        self.paint()
-        return super().resizeEvent(event)
+                self.viewers[i].set_image(img_data)
     
-    def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
-        if self.image is not None:
-            x, y = event.pos().x(), event.pos().y()
+    # def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
+    #     if self.draw:
 
-            x = int(x * self.scr.shape[1]/self.pixmap().size().width())
-            y = int(y * self.scr.shape[0]/self.pixmap().size().height())
+    #         if event.button() == QtCore.Qt.LeftButton:
+    #             x, y = event.position().x(), event.position().y()
+    #             x = int(x * self.scr.shape[1]/self.pixmap().size().width())
+    #             y = int(y * self.scr.shape[0]/self.pixmap().size().height())
+
+    #             if 0 <= x < self.R and 0 <= y < self.S: # mouse in coronal plane
+    #                 self.coords.append([x, self.S - y - 1])
+
+    #         elif event.button() == QtCore.Qt.RightButton:
+    #             mahotas.polygon.fill_polygon(self.coords, self.image[:, self.layers[1], :], color=self.tool_bar.pen_label)
+    #             self.coords.clear()
+
+    #         self.update_image()
+
+    def coronal_full_screen(self):
+        if self.disply_mode == 3:
+            self.hide_viewers((1, 2))
+            self.disply_mode = 0
+            self.viewers[0].full_screen_btn.setIcon(newIcon('menu'))
+
+        elif self.disply_mode == 0:
+            self.show_3_viewers()
+            self.disply_mode = 3
+            self.viewers[0].full_screen_btn.setIcon(newIcon('letter-c'))
             
-            if 0 <= x < self.R and 0 <= y < self.S: # mouse in coronal plane
-                self.set_layer(x, 0)
-                self.set_layer(self.S-y-1, 2)
-
-            elif self.R < x <= (self.R + self.A) and 0 <= y < self.S: # mouse in sagittal plane
-                x = x - self.R - 1
-                self.set_layer(x, 1)
-                self.set_layer(self.S-y-1, 2)
-
-            elif 0 <= x < self.R and self.S < y <= self.S + self.A: # mouse in axial plane
-                y = y - self.S - 1
-                self.set_layer(x, 0)
-                self.set_layer(self.A-y-1, 1)
-        
-        return super().mouseMoveEvent(event)
-    
-    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
-        if self.image is not None:
-            x, y = event.position().x(), event.position().y()
-            x = int(x * self.scr.shape[1]/self.pixmap().size().width())
-            y = int(y * self.scr.shape[0]/self.pixmap().size().height())
-
-            if 0 <= x < self.R and 0 <= y < self.S: # mouse in coronal plane
-                angle = 1 if event.angleDelta().y() > 0 else -1
-                self.set_layer(angle + self.layers[1], 1)
-
-            elif self.R < x <= (self.R + self.A) and 0 <= y < self.S: # mouse in sagittal plane
-                angle = 1 if event.angleDelta().y() > 0 else -1
-                self.set_layer(angle + self.layers[0], 0)
-
-            elif 0 <= x < self.R and self.S < y <= self.S + self.A: # mouse in axial plane
-                angle = 1 if event.angleDelta().y() > 0 else -1
-                self.set_layer(angle + self.layers[2], 2)
-
-        return super().wheelEvent(event)
-    
-    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
-        if self.draw:
-
-            if event.button() == QtCore.Qt.LeftButton:
-                x, y = event.position().x(), event.position().y()
-                x = int(x * self.scr.shape[1]/self.pixmap().size().width())
-                y = int(y * self.scr.shape[0]/self.pixmap().size().height())
-
-                if 0 <= x < self.R and 0 <= y < self.S: # mouse in coronal plane
-                    self.coords.append([x, self.S - y - 1])
-
-            elif event.button() == QtCore.Qt.RightButton:
-                mahotas.polygon.fill_polygon(self.coords, self.image[:, self.layers[1], :], color=self.tool_bar.pen_label)
-                self.coords.clear()
-
-            self.update_image()
-
+    def sagittal_full_screen(self):
+        if self.disply_mode == 3:
+            self.hide_viewers((0, 2))
+            self.disply_mode = 0
+            self.viewers[0].full_screen_btn.setIcon(newIcon('menu'))
             
+        elif self.disply_mode == 0:
+            self.show_3_viewers()
+            self.disply_mode = 3
+            self.viewers[0].full_screen_btn.setIcon(newIcon('letter-s'))
+    
+    def axial_full_screen(self):
+        if self.disply_mode == 3:
+            self.hide_viewers((0, 1))
+            self.disply_mode = 0
+            self.viewers[0].full_screen_btn.setIcon(newIcon('menu'))
+            
+        elif self.disply_mode == 0:
+            self.show_3_viewers()
+            self.disply_mode = 3
+            self.viewers[0].full_screen_btn.setIcon(newIcon('letter-a'))
 
-    def enterEvent(self, event):
-        self.setCursor(Qt.CrossCursor)
+    def hide_viewers(self, slice_index):
+        for i in slice_index:
+            self.viewers[i].hide()
 
-    def leaveEvent(self, event):
-        self.setCursor(Qt.ArrowCursor)
+    def show_3_viewers(self):
+        for viewer in self.viewers:
+                viewer.show()
+
+    # def enterEvent(self, event):
+    #     self.setCursor(Qt.CrossCursor)
+
+    # def leaveEvent(self, event):
+    #     self.setCursor(Qt.ArrowCursor)
 
 
 class Canvas(QtWidgets.QWidget):
@@ -208,9 +193,176 @@ class Canvas(QtWidgets.QWidget):
         super(Canvas, self).__init__()
 
         self.disp1 = iFrame(tool_bar)
-        self.disp2 = iFrame(tool_bar)
 
         layout = QtWidgets.QVBoxLayout()
         layout.setSpacing(0)
         layout.addWidget(self.disp1, 1)
         self.setLayout(layout)
+
+
+class SliceViewer(QWidget):
+    def __init__(self, parent, image_data=np.zeros((255, 255, 3)), slice_type=None):
+        super().__init__()
+        self.slice_type = slice_type
+        self.viewer = NewCanvas(parent, image_data, slice_type=slice_type)
+        self.full_screen_btn = QPushButton(self)
+
+        if self.slice_type == 'coronal':
+            self.full_screen_btn.setIcon(newIcon('letter-c'))
+        if self.slice_type == 'sagittal':
+            self.full_screen_btn.setIcon(newIcon('letter-s'))
+        if self.slice_type == 'axial':
+            self.full_screen_btn.setIcon(newIcon('letter-a'))
+
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.viewer)
+        hbox.addWidget(self.full_screen_btn) 
+        self.setLayout(hbox)
+
+    def set_image(self, image):
+        self.viewer.set_image(image)
+
+
+class NewCanvas(QGraphicsView):
+    def __init__(self, parent, image_data, slice_type):
+        super().__init__(parent)
+        self.scene = QGraphicsScene()
+        self.scene.setSceneRect(0, 0, 400, 400)
+        self.slice_type = slice_type
+
+        texts = []
+        if self.slice_type == 'coronal':
+            texts = ['S', 'L', 'I', 'R']
+        if self.slice_type == 'sagittal':
+            texts = ['S', 'A', 'I', 'P']
+        if self.slice_type == 'axial':
+            texts = ['A', 'L', 'P', 'R']
+
+        self.texts = []
+        for text in texts:
+            self.texts.append(MyText(text, 'Arial', 24, QColor(255, 255, 0, 255)))
+            self.scene.addItem(self.texts[-1])
+
+        self.initUI()
+
+        self.image_data = image_data
+        height, width, _  = self.image_data.shape
+        self.scale_factor = 1
+
+        self.pixmap = MyPixmapItem()
+        self.pixmap.setPixmap(QPixmap.fromImage(QImage(np.ascontiguousarray(self.image_data), width, height, QImage.Format_Grayscale8)))
+        self.pixmap.setPos(0, 0)
+        self.scene.addItem(self.pixmap)
+
+        self.view_size = self.size()
+        self.setScene(self.scene)
+
+    def initUI(self):
+        self.setBackgroundBrush(QColor(0, 0, 0, 255))
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setMouseTracking(False)
+
+    def set_image(self, image):
+        self.image_data = image
+        height, width, _  = self.image_data.shape
+        self.pixmap.setPixmap(QPixmap.fromImage(
+            QImage(self.image_data.astype(np.uint8),
+                   width,
+                   height,
+                   width*3,
+                   QImage.Format_RGB888)
+            )
+        )
+
+    def resizeEvent(self, event):
+        # resize scene
+        self.scene.setSceneRect(QRectF(QPointF(0, 0), event.size()))
+
+        # calculate scale factor
+        h, w, _ = self.image_data.shape
+        self.view_size = self.size()
+        ww = self.view_size.width()
+        hh = self.view_size.height()
+        scale_x = (self.view_size.width() - 2*self.texts[0].boundingRect().width()) / w
+        scale_y = (self.view_size.height() - 2*self.texts[0].boundingRect().height()) / h
+        self.scale_factor = min(scale_x, scale_y)
+
+        # scale pixmap
+        self.pixmap.setScale(self.scale_factor)
+        self.pixmap.setPos(QPointF((ww - w * self.scale_factor) // 2, (hh - h * self.scale_factor) // 2))
+
+        # set view minimum size by pixmap size
+        self.setMinimumSize(w + 2*self.texts[0].boundingRect().width(), h + 2*self.texts[0].boundingRect().height())
+
+        # write text after resize view
+        self.write_text()
+
+    def write_text(self):
+        AlignLeft(self.texts[0], self)
+        HorizontalCenter(self.texts[0], self)
+        self.texts[1].setPos(QPointF(self.view_size.width() - self.texts[1].boundingRect().width(),  self.view_size.height() / 2))
+        self.texts[2].setPos(QPointF(self.view_size.width() / 2, self.view_size.height() - self.texts[3].boundingRect().height()))
+        self.texts[3].setPos(QPointF(0, self.view_size.height() / 2))
+
+    def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
+        iframe = self.parent().parent()
+        if iframe.image is not None and event.buttons() & Qt.LeftButton:
+            x, y = event.pos().x(), event.pos().y()
+
+            pixmap_x = self.pixmap.pos().x()
+            pixmap_y = self.pixmap.pos().y()
+            
+            x = int((x - pixmap_x) / self.scale_factor)
+            y = int((y - pixmap_y) / self.scale_factor)
+
+            if self.slice_type == 'coronal': # mouse in coronal plane
+                iframe.set_layer(x, 0)
+                iframe.set_layer(iframe.S-y-1, 2)
+
+            elif self.slice_type == 'sagittal': # mouse in sagittal plane
+                iframe.set_layer(x, 1)
+                iframe.set_layer(iframe.S-y-1, 2)
+
+            elif self.slice_type == 'axial': # mouse in axial plane
+                iframe.set_layer(x, 0)
+                iframe.set_layer(iframe.A-y-1, 1)
+
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
+        ifame = self.parent().parent()
+        if self.slice_type == 'coronal': # mouse in coronal plane
+            angle = 1 if event.angleDelta().y() > 0 else -1
+            ifame.set_layer(angle + ifame.layers[1], 1)
+        
+        elif self.slice_type == 'sagittal': # mouse in sagitall plane
+            angle = 1 if event.angleDelta().y() > 0 else -1
+            ifame.set_layer(angle + ifame.layers[0], 0)
+
+        elif self.slice_type == 'axial': # mouse in axial plane
+            angle = 1 if event.angleDelta().y() > 0 else -1
+            ifame.set_layer(angle + ifame.layers[2], 2)
+
+
+class MyText(QGraphicsTextItem):
+    def __init__(self, text, font, s, color):
+        super().__init__(text)
+        self.setFont(QFont(font, s))
+        self.setDefaultTextColor(color)
+
+
+class MyPixmapItem(QGraphicsPixmapItem):
+    def __init__(self):
+        super().__init__()
+
+
+def AlignLeft(item, view):
+    item.setPos(0, item.pos().y())
+
+def AlignRight(item, view):
+    item.setPos(0, item.pos().y())
+
+def HorizontalCenter(item, view):
+    item.setPos(QPointF(view.size().width() / 2, item.pos().y()))
+
+def VetricalCenter(item, view):
+    item.setPos(QPointF(item.pos().x(), view.size().height() / 2))
