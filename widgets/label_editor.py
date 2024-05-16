@@ -60,7 +60,10 @@ class LabelEditor(QWidget):
     def load_labels(self, arr):
         self.label_list.clear()
         unique_values_int = np.unique(arr).astype(np.int32)
-        for value in unique_values_int:
+        for i, value in enumerate(unique_values_int):
+            if i > len(utils_label.LABEL_DATA.keys()):
+                return
+            
             if value in utils_label.LABEL_DATA.keys():
                 label = utils_label.LABEL_DATA[value]
                 self.current_labels[value] = label
