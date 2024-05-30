@@ -68,8 +68,8 @@ class MainWindow(QtWidgets.QMainWindow):
         action_group.triggered.connect(self.setTransparencyBG)
 
         # window menu
-        window_menu = menu_bar.addMenu('Window')
-        setting_menu = menu_bar.addMenu('Setting')
+        # window_menu = menu_bar.addMenu('Window')
+        # setting_menu = menu_bar.addMenu('Setting')
         help_menu = menu_bar.addMenu('Help')
         about_action = help_menu.addAction('About')
 
