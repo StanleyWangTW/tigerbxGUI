@@ -265,6 +265,7 @@ class RunTigerBx(QThread):
                 "d": "dgm",
                 "k": "dkt",
                 "c": "ct",
+                "C": "pve",
                 "S": "syn",
                 "w": "wmp",
                 "W": "wmh"

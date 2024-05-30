@@ -4,8 +4,8 @@ from os.path import basename
 import numpy as np
 import nibabel as nib
 
-# from .label import label_all, LABEL_DATA, DGM_LABEL
-from label import label_all, LABEL_DATA, DGM_LABEL
+from .label import label_all, LABEL_DATA, DGM_LABEL
+# from label import label_all, LABEL_DATA, DGM_LABEL
 
 def get_volume(nii, label):
     zoom = nii.header.get_zooms()
@@ -57,6 +57,18 @@ def ct_report(fname_ct, fname_dkt):
     for number in label_all['dkt']:
         average_ct = round(np.sum(ct[dkt == number])  / np.sum(dkt == number), 3)
         report.append([LABEL_DATA[number].name, average_ct])
+
+    return report
+
+
+def pve_report(fname_pve: str, fname_seg: str) -> list:
+    pve = nib.load(fname_pve).get_fdata()
+    seg = nib.load(fname_seg).get_fdata()
+    report = [['Structure Name', 'mean', 'std']]
+    for number in np.unique(seg)[1:]:
+        mean = round(np.mean(pve[seg == number]), 3)
+        std = round(np.std(pve[seg == number]), 3)
+        report.append([LABEL_DATA[number].name, mean, std])
 
     return report
 
@@ -125,15 +137,33 @@ def create_report_dicts(fname, models):
             f_wmh = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_wmh')
             report_dicts['wmh'] = wmh_report(f_wmh, f_wmp)
 
+    if 'pve' in models:
+        # # full brain labels
+        # if 'aseg' in models:    
+        #     report_dicts['bam'] = bam_report(f_bam, f_aseg)
+        # elif 'syn' in models:
+        #     report_dicts['bam'] = bam_report(f_bam, f_dgm)
+        
+        # else:
+        if 'dkt' in models: # gray matter
+            f_pve = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + f'_cgw_pve1')
+            report_dicts['cgw_pve1'] = pve_report(f_pve, f_dkt)
+
+        if 'wmp' in models: # white matter
+            f_pve = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + f'_cgw_pve2')
+            report_dicts['cgw_pve2'] = pve_report(f_pve, f_wmp)
+            
+
+
     if 'bam' in models:
         f_bam = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_bam')
 
         if 'aseg' in models:    
             report_dicts['bam'] = bam_report(f_bam, f_aseg)
         elif 'syn' in models:
-            report_dicts['bam'] = bam_report(f_bam, f_dgm)
-        elif 'dgm' in models:
             report_dicts['bam'] = bam_report(f_bam, f_syn)
+        elif 'dgm' in models:
+            report_dicts['bam'] = bam_report(f_bam, f_dgm)
 
     return report_dicts
 
@@ -149,15 +179,4 @@ def create_report_csv(fname, models):
 
 
 if __name__ == '__main__':
-    # pve0 = nib.load(r'output\CANDI_BPDwoPsy_030_cgw_pve0.nii.gz').get_fdata()
-    # pve1 = nib.load(r'output\CANDI_BPDwoPsy_030_cgw_pve1.nii.gz').get_fdata()
-    # pve2 = nib.load(r'output\CANDI_BPDwoPsy_030_cgw_pve2.nii.gz').get_fdata()
-    # total = pve0 + pve1 + pve2
-    # # print(np.unique(total))
-    # print(total[130, 100:150])
-    # import matplotlib.pyplot as plt
-    # plt.figure()
-    # plt.imshow(total[130, ...])
-    # plt.colorbar()
-    # plt.show()
-    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['wmp', 'wmh'])
+    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['bam', 'aseg', 'dgm', 'syn'])
