@@ -261,6 +261,7 @@ class RunTigerBx(QThread):
             self.creating_csv.emit()
             model_names = {
                 "a": "aseg",
+                "B": "bam",
                 "d": "dgm",
                 "k": "dkt",
                 "c": "ct",

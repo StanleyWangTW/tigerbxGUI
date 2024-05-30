@@ -21,6 +21,16 @@ def aseg_report(fname):
 
     return report
 
+def bam_report(fname_bam, fname_seg):
+    bam = nib.load(fname_bam).get_fdata()
+    seg = nib.load(fname_seg).get_fdata()
+    report = {'Structure Name': 'Average Brain Age(year)'}
+    for number in np.unique(seg)[1:]:
+        average_brain_age = round(np.sum(bam[seg == number])  / np.sum(seg == number), 3)
+        report[LABEL_DATA[number].name] = average_brain_age
+
+    return report
+
 
 def dgm_report(fname):
     nii = nib.load(fname)
@@ -70,12 +80,12 @@ def wmp_report(fname):
 def create_report_dicts(fname, models):
     report_dicts = dict()
     if 'aseg' in models:
-        f = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_aseg')
-        report_dicts['aseg'] = aseg_report(f)
+        f_aseg = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_aseg')
+        report_dicts['aseg'] = aseg_report(f_aseg)
 
     if 'dgm' in models:
-        f = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_dgm')
-        report_dicts['dgm'] = dgm_report(f)
+        f_dgm = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_dgm')
+        report_dicts['dgm'] = dgm_report(f_dgm)
 
     if 'dkt' in models:
         f_dkt = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_dkt')
@@ -86,12 +96,22 @@ def create_report_dicts(fname, models):
             report_dicts['ct'] = ct_report(f_ct, f_dkt)
     
     if 'syn' in models:
-        f_dkt = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_syn')
-        report_dicts['syn'] = syn_report(f_dkt)
+        f_syn = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_syn')
+        report_dicts['syn'] = syn_report(f_syn)
 
     if 'wmp' in models:
         f = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_wmp')
         report_dicts['wmp'] = wmp_report(f)
+
+    if 'bam' in models:
+        f_bam = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_bam')
+
+        if 'aseg' in models:    
+            report_dicts['bam'] = bam_report(f_bam, f_aseg)
+        elif 'syn' in models:
+            report_dicts['bam'] = bam_report(f_bam, f_dgm)
+        elif 'dgm' in models:
+            report_dicts['bam'] = bam_report(f_bam, f_syn)
 
     return report_dicts
 
@@ -107,4 +127,4 @@ def create_report_csv(fname, models):
 
 
 if __name__ == '__main__':
-    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['aseg', 'dgm', 'wmp'])
+    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['aseg', 'bam'])
