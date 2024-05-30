@@ -4,8 +4,8 @@ from os.path import basename
 import numpy as np
 import nibabel as nib
 
-from .label import label_all, LABEL_DATA, DGM_LABEL
-# from label import label_all, LABEL_DATA, DGM_LABEL
+# from .label import label_all, LABEL_DATA, DGM_LABEL
+from label import label_all, LABEL_DATA, DGM_LABEL
 
 def get_volume(nii, label):
     zoom = nii.header.get_zooms()
@@ -79,13 +79,18 @@ def wmp_report(fname):
     return report
 
 def wmh_report(fname_wmh, fname_wmp):
-    wmh = nib.load(fname_wmh).get_fdata()
+    nii_wmh = nib.load(fname_wmh)
+    zoom = nii_wmh.header.get_zooms()
+    voxel_size = zoom[0] * zoom[1] * zoom[2]
+
+    wmh = nii_wmh.get_fdata()
     wmp = nib.load(fname_wmp).get_fdata()
 
-    report = [['Structure Name', 'Hypointensity ratio(%)']]
+    report = [['Structure Name', 'Volume(mm^3)', 'Ratio(%)']]
     for number in label_all['wmp']:
+        vol = round(np.sum(wmh[wmp == number]) * voxel_size, 3) 
         ratio = round(np.sum(wmh[wmp == number]) / np.sum(wmp == number) * 100, 3)
-        report.append([LABEL_DATA[number].name, ratio])
+        report.append([LABEL_DATA[number].name, vol, ratio])
 
     return report
 
@@ -155,4 +160,4 @@ if __name__ == '__main__':
     # plt.imshow(total[130, ...])
     # plt.colorbar()
     # plt.show()
-    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['aseg', 'bam', 'dgm', 'dkt', 'ct', 'syn', 'wmp', 'wmh'])
+    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['wmp', 'wmh'])
