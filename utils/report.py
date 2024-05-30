@@ -4,7 +4,8 @@ from os.path import basename
 import numpy as np
 import nibabel as nib
 
-from .label import label_all, LABEL_DATA, DGM_LABEL
+# from .label import label_all, LABEL_DATA, DGM_LABEL
+from label import label_all, LABEL_DATA, DGM_LABEL
 
 def get_volume(nii, label):
     zoom = nii.header.get_zooms()
@@ -77,6 +78,18 @@ def wmp_report(fname):
 
     return report
 
+def wmh_report(fname_wmh, fname_wmp):
+    wmh = nib.load(fname_wmh).get_fdata()
+    wmp = nib.load(fname_wmp).get_fdata()
+
+    report = {'Structure Name': 'Hypointensity ratio(%)'}
+    for number in label_all['wmp']:
+        ratio = round(np.sum(wmh[wmp == number]) / np.sum(wmp == number) * 100, 3)
+        report[LABEL_DATA[number].name] = ratio
+
+    return report
+
+
 def create_report_dicts(fname, models):
     report_dicts = dict()
     if 'aseg' in models:
@@ -100,8 +113,12 @@ def create_report_dicts(fname, models):
         report_dicts['syn'] = syn_report(f_syn)
 
     if 'wmp' in models:
-        f = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_wmp')
-        report_dicts['wmp'] = wmp_report(f)
+        f_wmp = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_wmp')
+        report_dicts['wmp'] = wmp_report(f_wmp)
+
+        if 'wmh' in models:
+            f_wmh = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_wmh')
+            report_dicts['wmh'] = wmh_report(f_wmh, f_wmp)
 
     if 'bam' in models:
         f_bam = fname.replace(basename(fname).split('.')[0], basename(fname).split('.')[0] + '_bam')
@@ -127,4 +144,6 @@ def create_report_csv(fname, models):
 
 
 if __name__ == '__main__':
-    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['aseg', 'bam'])
+    # nii = nib.load(r'output\CANDI_BPDwoPsy_030_wmh.nii.gz')
+    # print(np.unique(nii.get_fdata()))
+    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['wmp', 'wmh'])

@@ -266,7 +266,8 @@ class RunTigerBx(QThread):
                 "k": "dkt",
                 "c": "ct",
                 "S": "syn",
-                "w": "wmp"
+                "w": "wmp",
+                "W": "wmh"
             }
             mds = list()
             for a in self.args:
