@@ -4,8 +4,8 @@ from os.path import basename
 import numpy as np
 import nibabel as nib
 
-# from .label import label_all, LABEL_DATA, DGM_LABEL
-from label import label_all, LABEL_DATA, DGM_LABEL
+from .label import label_all, LABEL_DATA, DGM_LABEL
+# from label import label_all, LABEL_DATA, DGM_LABEL
 
 def get_volume(nii, label):
     zoom = nii.header.get_zooms()
@@ -16,65 +16,65 @@ def get_volume(nii, label):
 
 def aseg_report(fname):
     nii = nib.load(fname)
-    report = {'Structure Name': 'Volume(mm^3)'}
+    report = [['Structure Name', 'Volume(mm^3)']]
     for number in label_all['aseg']:
-        report[LABEL_DATA[number].name] = round(get_volume(nii, number))
+        report.append([LABEL_DATA[number].name, round(get_volume(nii, number))])
 
     return report
 
 def bam_report(fname_bam, fname_seg):
     bam = nib.load(fname_bam).get_fdata()
     seg = nib.load(fname_seg).get_fdata()
-    report = {'Structure Name': 'Average Brain Age(year)'}
+    report =  [['Structure Name', 'Average Brain Age(year)']]
     for number in np.unique(seg)[1:]:
         average_brain_age = round(np.sum(bam[seg == number])  / np.sum(seg == number), 3)
-        report[LABEL_DATA[number].name] = average_brain_age
+        report.append([LABEL_DATA[number].name, average_brain_age])
 
     return report
 
 
 def dgm_report(fname):
     nii = nib.load(fname)
-    report = {'Structure Name': 'Volume(mm^3)'}
+    report = [['Structure Name', 'Volume(mm^3)']]
     for name, number in DGM_LABEL.items():
-        report[name] = round(get_volume(nii, number))
+        report.append([name, round(get_volume(nii, number))])
 
     return report
 
 
 def dkt_report(fname):
     nii = nib.load(fname)
-    report = {'Structure Name': 'Volume(mm^3)'}
+    report = [['Structure Name', 'Volume(mm^3)']]
     for number in label_all['dkt']:
-        report[LABEL_DATA[number].name] = round(get_volume(nii, number))
+        report.append([LABEL_DATA[number].name, round(get_volume(nii, number))])
 
     return report
 
 def ct_report(fname_ct, fname_dkt):
     ct = nib.load(fname_ct).get_fdata()
     dkt = nib.load(fname_dkt).get_fdata()
-    report = {'Structure Name': 'Average Cortical Thickness(mm)'}
+    report = [['Structure Name', 'Average Cortical Thickness(mm)']]
     for number in label_all['dkt']:
         average_ct = round(np.sum(ct[dkt == number])  / np.sum(dkt == number), 3)
-        report[LABEL_DATA[number].name] = average_ct
+        report.append([LABEL_DATA[number].name, average_ct])
 
     return report
 
 
 def syn_report(fname):
     nii = nib.load(fname)
-    report = {'Structure Name': 'Volume(mm^3)'}
+    report = [['Structure Name', 'Volume(mm^3)']]
     for number in label_all['synthseg']:
-        report[LABEL_DATA[number].name] = round(get_volume(nii, number))
+        report.append([LABEL_DATA[number].name, round(get_volume(nii, number))])
 
     return report
 
 
 def wmp_report(fname):
     nii = nib.load(fname)
-    report = {'Structure Name': 'Volume(mm^3)'}
+    report = [['Structure Name', 'Volume(mm^3)']]
     for number in label_all['wmp']:
-        report[LABEL_DATA[number].name] = round(get_volume(nii, number))
+        report.append([LABEL_DATA[number].name, round(get_volume(nii, number))])
 
     return report
 
@@ -82,10 +82,10 @@ def wmh_report(fname_wmh, fname_wmp):
     wmh = nib.load(fname_wmh).get_fdata()
     wmp = nib.load(fname_wmp).get_fdata()
 
-    report = {'Structure Name': 'Hypointensity ratio(%)'}
+    report = [['Structure Name', 'Hypointensity ratio(%)']]
     for number in label_all['wmp']:
         ratio = round(np.sum(wmh[wmp == number]) / np.sum(wmp == number) * 100, 3)
-        report[LABEL_DATA[number].name] = ratio
+        report.append([LABEL_DATA[number].name, ratio])
 
     return report
 
@@ -136,14 +136,23 @@ def create_report_dicts(fname, models):
 def create_report_csv(fname, models):
     report_dicts = create_report_dicts(fname, models)
 
-    for model, report_dict in report_dicts.items():
+    for model, report in report_dicts.items():
         csv_f = fname.split('.')[0] + f'_{model}.csv'
         with open(csv_f, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerows(report_dict.items())
+            writer.writerows(report)
 
 
 if __name__ == '__main__':
-    # nii = nib.load(r'output\CANDI_BPDwoPsy_030_wmh.nii.gz')
-    # print(np.unique(nii.get_fdata()))
-    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['wmp', 'wmh'])
+    # pve0 = nib.load(r'output\CANDI_BPDwoPsy_030_cgw_pve0.nii.gz').get_fdata()
+    # pve1 = nib.load(r'output\CANDI_BPDwoPsy_030_cgw_pve1.nii.gz').get_fdata()
+    # pve2 = nib.load(r'output\CANDI_BPDwoPsy_030_cgw_pve2.nii.gz').get_fdata()
+    # total = pve0 + pve1 + pve2
+    # # print(np.unique(total))
+    # print(total[130, 100:150])
+    # import matplotlib.pyplot as plt
+    # plt.figure()
+    # plt.imshow(total[130, ...])
+    # plt.colorbar()
+    # plt.show()
+    create_report_csv(r'output\CANDI_BPDwoPsy_030.nii.gz', ['aseg', 'bam', 'dgm', 'dkt', 'ct', 'syn', 'wmp', 'wmh'])
