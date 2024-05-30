@@ -13,7 +13,8 @@ class FileTree(QTreeWidget):
         super(FileTree, self).__init__()
         self.setHeaderLabels(['Name', 'Seg. mode'])
 
-    def addData(self, file_dict):
+    def loadData(self, file_dict):
+        self.clear()
         items = list()
         for key, values in file_dict.items():
             item = QTreeWidgetItem([key])

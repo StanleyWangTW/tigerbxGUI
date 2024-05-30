@@ -123,27 +123,27 @@ class MainWindow(QtWidgets.QMainWindow):
     def open_files(self):
         self.filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'select file', r'.',
                                                                    'Nii Files (*.nii *.nii.gz)')
-
+        self.fnames_dict.clear()
         for filename in self.filenames:
             self.fnames_dict[osp.basename(filename)] = [filename]
 
-        self.file_tree.clear()
-        self.file_tree.addData(self.fnames_dict)
+        self.file_tree.loadData(self.fnames_dict)
 
         self.change_current_file(self.filenames[0])
 
     def file_selection_changed(self):
         items = self.file_tree.selectedItems()
 
-        if not items:
-            return
+        if items[0].text(1): # child selected
+            f = items[0].text(0)
+        else: # parent selected
+            f = self.fnames_dict[items[0].text(0)][0]
 
-        self.change_current_file(items[0].text(0))
+        self.change_current_file(f)
 
     def change_current_file(self, f):
         self.current_file = image_process.file_to_arr(f)
         self.clear_overlay()
-        self.label_editor.load_labels(self.current_file)
         self.central_widget.disp1.set_image(self.current_file)
         self.statusBar().showMessage(f'Opened: {f}')
 
@@ -157,7 +157,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def add_overlay(self):
         if self.current_file is not None:
             fname_overlay, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'select file', r'.', 'Nii Files (*.nii *.nii.gz)')
-            print(fname_overlay)
             self.overlay = image_process.file_to_arr(fname_overlay)
             self.central_widget.disp1.overlay = self.overlay
             self.label_editor.load_labels(self.overlay)
@@ -165,7 +164,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def clear_overlay(self):
         self.overlay = None
-        self.label_editor.load_labels(self.current_file)
         self.central_widget.disp1.overlay = None
         self.central_widget.disp1.update_image()
 
@@ -231,8 +229,7 @@ class MainWindow(QtWidgets.QMainWindow):
             for output in outputs:
                 self.fnames_dict[key].append(output)
 
-        self.file_tree.clear()
-        self.file_tree.addData(self.fnames_dict)
+        self.file_tree.loadData(self.fnames_dict)
 
     def exit(self):
         self.app.quit()
