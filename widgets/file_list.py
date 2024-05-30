@@ -27,6 +27,16 @@ class FileTree(QTreeWidget):
                 child = QTreeWidgetItem([value, ftype])
                 item.addChild(child)
 
-            items.append(item)
+            self.addTopLevelItem(item)
 
-        self.addTopLevelItems(items)
+        self.expandAllItems()
+
+    def expandAllItems(self):
+        def recursive_expand(item):
+            item.setExpanded(True)
+            for i in range(item.childCount()):
+                recursive_expand(item.child(i))
+
+        root = self.invisibleRootItem()
+        for i in range(root.childCount()):
+            recursive_expand(root.child(i))
