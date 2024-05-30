@@ -24,7 +24,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.filenames = None
         self.fnames_dict = dict()
         self.current_file = None
-        self.overlays = None
+        self.overlay = None
         self.output_dir = 'output'
 
         super().__init__()
@@ -142,6 +142,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def change_current_file(self, f):
         self.current_file = image_process.file_to_arr(f)
+        self.clear_overlay()
         self.label_editor.load_labels(self.current_file)
         self.central_widget.disp1.set_image(self.current_file)
         self.statusBar().showMessage(f'Opened: {f}')
@@ -154,25 +155,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # overlay
     def add_overlay(self):
-        def read_labels(filename):
-            overlay = image_process.file_to_arr(filename).astype(np.int32)
-            unique_values = np.unique(overlay)
-            labels = load_labels()
-            for value in unique_values:
-                if value in labels.keys():
-                    self.label_list.addLabel(value, labels[value])
-
-
         if self.current_file is not None:
-            self.overlays, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'select file', r'.', 'Nii Files (*.nii *.nii.gz)')
-            read_labels(self.overlays)
-            self.central_widget.disp1.overlay = image_process.file_to_arr(self.overlays)
+            fname_overlay, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'select file', r'.', 'Nii Files (*.nii *.nii.gz)')
+            print(fname_overlay)
+            self.overlay = image_process.file_to_arr(fname_overlay)
+            self.central_widget.disp1.overlay = self.overlay
+            self.label_editor.load_labels(self.overlay)
             self.central_widget.disp1.update_image()
 
     def clear_overlay(self):
-        self.overlays = None
-        self.label_list.clear()
-        self.central_widget.disp1.overlay = self.overlays
+        self.overlay = None
+        self.label_editor.load_labels(self.current_file)
+        self.central_widget.disp1.overlay = None
         self.central_widget.disp1.update_image()
 
     def setTransparencyBG(self, action):
