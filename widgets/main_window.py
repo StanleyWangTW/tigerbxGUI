@@ -117,8 +117,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.central_widget)
 
     def connect(self):
-        self.label_editor.zoom_btn.clicked.connect(self.central_widget.disp1.zoom_mode)
-        self.label_editor.crosshair_btn.clicked.connect(self.central_widget.disp1.crosshair_mode)
+        self.label_editor.zoom_btn.clicked.connect(self.central_widget.zoom_mode)
+        self.label_editor.crosshair_btn.clicked.connect(self.central_widget.crosshair_mode)
 
     def open_files(self):
         self.filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'select file', r'.',
@@ -144,7 +144,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def change_current_file(self, f):
         self.current_file = image_process.file_to_arr(f)
         self.clear_overlay()
-        self.central_widget.disp1.set_image(self.current_file)
+        self.central_widget.set_image(self.current_file)
         self.statusBar().showMessage(f'Opened: {f}')
 
     def select_folder(self):
@@ -158,42 +158,42 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.current_file is not None:
             fname_overlay, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'select file', r'.', 'Nii Files (*.nii *.nii.gz)')
             self.overlay = image_process.file_to_arr(fname_overlay)
-            self.central_widget.disp1.overlay = self.overlay
+            self.central_widget.overlay = self.overlay
             self.label_editor.load_labels(self.overlay)
-            self.central_widget.disp1.update_image()
+            self.central_widget.update_image()
 
     def clear_overlay(self):
         self.overlay = None
-        self.central_widget.disp1.overlay = None
-        self.central_widget.disp1.update_image()
+        self.central_widget.overlay = None
+        self.central_widget.update_image()
 
     def setTransparencyBG(self, action):
-        self.central_widget.disp1.alpha = float(action.text().replace('%', '')) / 100
-        self.central_widget.disp1.update_image()
+        self.central_widget.alpha = float(action.text().replace('%', '')) / 100
+        self.central_widget.update_image()
 
     def update_coronal(self, layer):
-        self.central_widget.disp1.set_layer(layer, 1)
+        self.central_widget.set_layer(layer, 1)
 
     def update_sagittal(self, layer):
-        self.central_widget.disp1.set_layer(layer, 0)
+        self.central_widget.set_layer(layer, 0)
 
     def update_axial(self, layer):
-        self.central_widget.disp1.set_layer(layer, 2)
+        self.central_widget.set_layer(layer, 2)
 
     def change_min_max(self, value):
         minv = self.tool_bar.minv.value()
         maxv = self.tool_bar.maxv.value()
-        self.central_widget.disp1.minv = minv
-        self.central_widget.disp1.maxv = maxv
-        self.central_widget.disp1.update_image()
+        self.central_widget.minv = minv
+        self.central_widget.maxv = maxv
+        self.central_widget.update_image()
 
     def change_cmap(self, cmap):
-        self.central_widget.disp1.cmap = cmap
-        self.central_widget.disp1.update_image()
+        self.central_widget.cmap = cmap
+        self.central_widget.update_image()
 
     def change_overlay_cmap(self, cmap):
-        self.central_widget.disp1.overlay_cmap = cmap
-        self.central_widget.disp1.update_image()
+        self.central_widget.overlay_cmap = cmap
+        self.central_widget.update_image()
 
     def run(self):
         if self.filenames is not None:

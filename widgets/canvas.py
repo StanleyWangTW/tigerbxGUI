@@ -9,7 +9,7 @@ from utils.display import color_show
 from utils.qt import newIcon
 
 
-class iFrame(QtWidgets.QWidget):
+class Canvas(QtWidgets.QWidget):
 
     def __init__(self, tool_bar):
         super().__init__()
@@ -194,19 +194,6 @@ class iFrame(QtWidgets.QWidget):
 
     # def leaveEvent(self, event):
     #     self.setCursor(Qt.ArrowCursor)
-
-
-class Canvas(QtWidgets.QWidget):
-
-    def __init__(self, tool_bar):
-        super(Canvas, self).__init__()
-
-        self.disp1 = iFrame(tool_bar)
-
-        layout = QtWidgets.QVBoxLayout()
-        layout.setSpacing(0)
-        layout.addWidget(self.disp1, 1)
-        self.setLayout(layout)
 
 
 class SliceViewer(QWidget):
