@@ -74,12 +74,3 @@ class ToolBar(QtWidgets.QToolBar):
 
         self.run_button = QtWidgets.QPushButton('run')
         self.addWidget(self.run_button)
-
-        pen_label_btn = QtWidgets.QPushButton("Color")
-        pen_label_btn.clicked.connect(self.choose_label)
-        self.addWidget(pen_label_btn)
-
-    def choose_label(self):
-        label, ok = QInputDialog.getInt(self, "Pen Width", "Enter pen width:", self.pen_label, 0, 200)
-        if ok:
-            self.pen_label = label

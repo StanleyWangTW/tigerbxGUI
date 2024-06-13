@@ -1,3 +1,5 @@
+from functools import partial
+
 from PySide6.QtWidgets import *
 from PySide6.QtGui import QImage, QPixmap, Qt, QIntValidator
 import numpy as np
@@ -19,43 +21,87 @@ class LabelEditor(QWidget):
         self.connect_signals()
 
     def initUI(self):
+        # tool push buttons
         tools = QGroupBox('Tools', self)
-        self.crosshair_btn = QPushButton(icon=newIcon('crosshair'))
-        self.crosshair_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.zoom_btn = QPushButton(icon=newIcon('zoom'))
-        self.zoom_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         tools_layout = QHBoxLayout()
-        tools_layout.addWidget(self.crosshair_btn)
-        tools_layout.addWidget(self.zoom_btn)
         tools.setLayout(tools_layout)
 
+        self.crosshair_btn = QPushButton(icon=newIcon('crosshair'))
+        self.crosshair_btn.setCheckable(True)
+        self.crosshair_btn.setChecked(True)
+        self.crosshair_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        tools_layout.addWidget(self.crosshair_btn)
+
+        self.zoom_btn = QPushButton(icon=newIcon('zoom'))
+        self.zoom_btn.setCheckable(True)
+        self.zoom_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        tools_layout.addWidget(self.zoom_btn)
+
+        self.brush_btn = QPushButton(icon=newIcon('brush'))
+        self.brush_btn.setCheckable(True)
+        self.brush_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        tools_layout.addWidget(self.brush_btn)
+
+        # tool editor
+        self.brush_editor = BrushEditor(self)
+        self.tool_editor = QStackedWidget(self)
+        self.tool_editor.addWidget(self.brush_editor)
+        self.tool_editor.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        # label list & buttons
         self.label_list = LabelList()
-        
         self.new_btn = QPushButton('new')
         self.delete_btn = QPushButton('delete')
         hbox = QHBoxLayout()
         hbox.addWidget(self.new_btn)
         hbox.addWidget(self.delete_btn)
 
+        # vbox layout of all widgets
         vbox = QVBoxLayout()
         vbox.addWidget(tools)
+        vbox.addWidget(self.tool_editor)
         vbox.addWidget(self.label_list)
         vbox.addLayout(hbox)
         self.setLayout(vbox)
 
     def connect_signals(self):
+        self.crosshair_btn.clicked.connect(partial(self.zoom_btn.setChecked, False))
+        self.crosshair_btn.clicked.connect(partial(self.brush_btn.setChecked, False))
+
+        self.zoom_btn.clicked.connect(partial(self.crosshair_btn.setChecked, False))
+        self.zoom_btn.clicked.connect(partial(self.brush_btn.setChecked, False))
+
+        self.brush_btn.clicked.connect(partial(self.crosshair_btn.setChecked, False))
+        self.brush_btn.clicked.connect(partial(self.zoom_btn.setChecked, False))
+
         self.new_btn.clicked.connect(self.create_label)
+        self.delete_btn.clicked.connect(self.delete_label)
 
     def create_label(self):
-        label_picker = LabelCreater()
-        number, name, rgba = label_picker.create_label()
+        label_creater = LabelCreater()
+        number, name, rgba = label_creater.create_label()
         if number is not None:
-            if number in self.current_labels:
-                self.current_labels[number] = utils_label.Label(name, rgba)
+            if number in self.current_labels.keys():
                 show_error_message(f'Label value={number} alreay exits.\nPlease enter a different value.')
                 return
 
+            self.current_labels[number] = utils_label.Label(name, rgba)
             self.label_list.addLabel(number, name, rgba)
+            self.sort_labels()
+
+    def delete_label(self):
+        selected_item = self.label_list.currentItem()
+        if selected_item:
+            number = int(self.label_list.itemWidget(selected_item).number.text())
+            self.current_labels.pop(number)
+            self.label_list.takeItem(self.label_list.row(selected_item))
+
+    def sort_labels(self):
+        sorted_keys = sorted(self.current_labels.keys())
+        
+        self.label_list.clear()
+        for key in sorted_keys:
+            self.label_list.addLabelObj(key, self.current_labels[key])
 
     def load_labels(self, arr):
         self.label_list.clear()
@@ -66,8 +112,49 @@ class LabelEditor(QWidget):
             
             if value in utils_label.LABEL_DATA.keys():
                 label = utils_label.LABEL_DATA[value]
+                label.rgba[3] = 255    # set alpha channel to 255
                 self.current_labels[value] = label
                 self.label_list.addLabelObj(value, label)
+
+
+class BrushEditor(QWidget):
+    def __init__(self, parent):
+        super(BrushEditor, self).__init__(parent)
+        self.initUI()
+        self.setMaximumSize(200, 200)
+
+    def initUI(self):
+        vbox = QVBoxLayout()
+
+        # brush Type
+        qlabel = QLabel(self, text='Brush Type:')
+        vbox.addWidget(qlabel)
+
+        hbox = QHBoxLayout()
+        self.square_brush_btn = QPushButton(text='square', parent=self)
+        self.circle_brush_btn = QPushButton(text='circle', parent=self)
+        hbox.addWidget(self.square_brush_btn)
+        hbox.addWidget(self.circle_brush_btn)
+        vbox.addLayout(hbox)
+
+        # brush size
+        qlabel = QLabel(self, text='Brush Size:')
+        vbox.addWidget(qlabel)
+
+        hbox = QHBoxLayout()
+        self.brush_size_spnbox = QSpinBox(self)
+        self.brush_size_spnbox.setRange(1, 40)
+        self.brush_size_spnbox.setValue(1)
+        hbox.addWidget(self.brush_size_spnbox)
+        vbox.addLayout(hbox)
+        
+        # brush options
+        qlabel = QLabel(self, text='Brush Options:')
+        vbox.addWidget(qlabel)
+        self.brush_3d_chkbox = QCheckBox(self, text='3D')
+        vbox.addWidget(self.brush_3d_chkbox)
+
+        self.setLayout(vbox)
 
 
 class  LabelList(QListWidget):
@@ -237,6 +324,6 @@ if __name__ == '__main__':
     from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    win  = LabelList()
+    win  = LabelEditor()
     win.show()
     app.exec()

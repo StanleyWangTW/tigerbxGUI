@@ -15,7 +15,6 @@ class FileTree(QTreeWidget):
 
     def loadData(self, file_dict):
         self.clear()
-        items = list()
         for key, values in file_dict.items():
             item = QTreeWidgetItem([key])
             for value in values:
