@@ -127,15 +127,15 @@ class BrushEditor(QWidget):
         vbox = QVBoxLayout()
 
         # brush Type
-        qlabel = QLabel(self, text='Brush Type:')
-        vbox.addWidget(qlabel)
+        # qlabel = QLabel(self, text='Brush Type:')
+        # vbox.addWidget(qlabel)
 
-        hbox = QHBoxLayout()
-        self.square_brush_btn = QPushButton(text='square', parent=self)
-        self.circle_brush_btn = QPushButton(text='circle', parent=self)
-        hbox.addWidget(self.square_brush_btn)
-        hbox.addWidget(self.circle_brush_btn)
-        vbox.addLayout(hbox)
+        # hbox = QHBoxLayout()
+        # self.square_brush_btn = QPushButton(text='square', parent=self)
+        # self.circle_brush_btn = QPushButton(text='circle', parent=self)
+        # hbox.addWidget(self.square_brush_btn)
+        # hbox.addWidget(self.circle_brush_btn)
+        # vbox.addLayout(hbox)
 
         # brush size
         qlabel = QLabel(self, text='Brush Size:')
