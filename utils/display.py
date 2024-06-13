@@ -17,6 +17,17 @@ def color_show(img, minv, maxv, cmap):
     colormap = matplotlib.colormaps[cmap]
     return colormap(data)[..., :3] * 255
 
+def overlay_color_show(overlay, current_labels):
+    output = np.zeros(overlay.shape + (4,))
+    for value in np.unique(overlay):
+        if value == 0 or value not in current_labels.keys():
+            for c in range(4): # rgba channels
+                (output[..., c])[overlay == value] = 0
+        else:
+            for c in range(4): # rgba channels
+                (output[..., c])[overlay == value] = current_labels[value].rgba[c]
+
+    return output.astype(np.uint8)
 
 def freesurfer_cmap(img):
     output = np.zeros(img.shape + (3,))

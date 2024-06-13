@@ -106,3 +106,9 @@ def file_to_arr(f):
     arr = reorder_img(nib.load(f), resample='nearest').get_fdata()
     # return arr.astype(np.uint8)
     return arr
+
+def nii_to_arr(nii):
+    return reorder_img(nii, resample='nearest').get_fdata()
+
+def open_nii_file(f):
+    return reorder_img(nib.load(f), resample='nearest')
