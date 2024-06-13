@@ -6,7 +6,7 @@ from PySide6 import QtWidgets
 from widgets import MainWindow
 from utils import newIcon
 
-__appname__ = "TigerBX"
+__appname__ = "TigerBX 0.1.16"
 __version__ = "0.0.4"
 
 def main():
